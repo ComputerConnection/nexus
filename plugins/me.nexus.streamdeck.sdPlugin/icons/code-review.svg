@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Magnifying glass -->
+  <circle cx="62" cy="62" r="30" fill="none" stroke="#00bfff" stroke-width="3"/>
+  <line x1="82" y1="82" x2="112" y2="112" stroke="#00bfff" stroke-width="4" stroke-linecap="round"/>
+  <!-- Code inside -->
+  <text x="47" y="58" font-family="monospace" font-size="18" fill="#00bfff">&lt;/&gt;</text>
+  <line x1="45" y1="72" x2="79" y2="72" stroke="#00bfff" stroke-width="2" opacity="0.5"/>
+</svg>

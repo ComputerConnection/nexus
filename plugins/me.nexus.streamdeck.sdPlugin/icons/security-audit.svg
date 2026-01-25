@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Magnifying glass over shield -->
+  <path d="M52 32 L82 47 L82 67 Q82 87 52 102 Q22 87 22 67 L22 47 Z" 
+        fill="none" stroke="#ff0040" stroke-width="2"/>
+  <!-- Magnifying glass -->
+  <circle cx="85" cy="75" r="25" fill="none" stroke="#ff0040" stroke-width="3"/>
+  <line x1="102" y1="92" x2="122" y2="112" stroke="#ff0040" stroke-width="4" stroke-linecap="round"/>
+  <!-- Eye in magnifier -->
+  <ellipse cx="85" cy="75" rx="12" ry="8" fill="none" stroke="#ff0040" stroke-width="2"/>
+  <circle cx="85" cy="75" r="4" fill="#ff0040"/>
+</svg>

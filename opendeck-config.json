@@ -1,0 +1,234 @@
+{
+  "name": "NEXUS Stream Deck Profile",
+  "description": "Control NEXUS multi-agent system from your Stream Deck",
+  "version": "1.0.0",
+  "api_base_url": "http://localhost:9999/api",
+  "buttons": {
+    "row1": [
+      {
+        "id": "spawn-orchestrator",
+        "name": "Orchestrator",
+        "icon": "brain",
+        "color": "#00fff9",
+        "action": {
+          "method": "POST",
+          "endpoint": "/agents/spawn/orchestrator",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}",
+            "assigned_task": "Analyze the current project and suggest improvements"
+          }
+        }
+      },
+      {
+        "id": "spawn-architect",
+        "name": "Architect",
+        "icon": "building",
+        "color": "#ff00ff",
+        "action": {
+          "method": "POST",
+          "endpoint": "/agents/spawn/architect",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}",
+            "assigned_task": "Review and improve the system architecture"
+          }
+        }
+      },
+      {
+        "id": "spawn-implementer",
+        "name": "Coder",
+        "icon": "code",
+        "color": "#39ff14",
+        "action": {
+          "method": "POST",
+          "endpoint": "/agents/spawn/implementer",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "spawn-tester",
+        "name": "Tester",
+        "icon": "flask",
+        "color": "#ff6600",
+        "action": {
+          "method": "POST",
+          "endpoint": "/agents/spawn/tester",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}",
+            "assigned_task": "Write comprehensive tests for the codebase"
+          }
+        }
+      }
+    ],
+    "row2": [
+      {
+        "id": "quick-build-api",
+        "name": "Build API",
+        "icon": "server",
+        "color": "#39ff14",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/build-api/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-write-tests",
+        "name": "Write Tests",
+        "icon": "test-tube",
+        "color": "#ff6600",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/write-tests/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-security",
+        "name": "Security",
+        "icon": "shield",
+        "color": "#ff0040",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/security-audit/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-docs",
+        "name": "Gen Docs",
+        "icon": "file-text",
+        "color": "#808080",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/generate-docs/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      }
+    ],
+    "row3": [
+      {
+        "id": "quick-refactor",
+        "name": "Refactor",
+        "icon": "git-branch",
+        "color": "#ff00ff",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/refactor/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-review",
+        "name": "Review",
+        "icon": "search",
+        "color": "#00bfff",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/code-review/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-debug",
+        "name": "Debug",
+        "icon": "bug",
+        "color": "#ff6600",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/debug/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      },
+      {
+        "id": "quick-cicd",
+        "name": "CI/CD",
+        "icon": "container",
+        "color": "#9945ff",
+        "action": {
+          "method": "POST",
+          "endpoint": "/quick-actions/setup-cicd/execute",
+          "body": {
+            "working_directory": "{{WORKING_DIR}}"
+          }
+        }
+      }
+    ],
+    "row4": [
+      {
+        "id": "system-status",
+        "name": "Status",
+        "icon": "activity",
+        "color": "#00fff9",
+        "action": {
+          "method": "GET",
+          "endpoint": "/status"
+        }
+      },
+      {
+        "id": "list-agents",
+        "name": "Agents",
+        "icon": "users",
+        "color": "#39ff14",
+        "action": {
+          "method": "GET",
+          "endpoint": "/agents"
+        }
+      },
+      {
+        "id": "kill-all",
+        "name": "Kill All",
+        "icon": "x-circle",
+        "color": "#ff0040",
+        "confirm": true,
+        "action": {
+          "method": "DELETE",
+          "endpoint": "/agents"
+        }
+      },
+      {
+        "id": "health-check",
+        "name": "Health",
+        "icon": "heart",
+        "color": "#39ff14",
+        "action": {
+          "method": "GET",
+          "endpoint": "/health"
+        }
+      }
+    ]
+  },
+  "variables": {
+    "WORKING_DIR": {
+      "description": "Default working directory for agents",
+      "default": "/home/zach-linux/nexus",
+      "type": "path"
+    }
+  },
+  "curl_examples": {
+    "spawn_orchestrator": "curl -X POST http://localhost:9999/api/agents/spawn/orchestrator -H 'Content-Type: application/json' -d '{\"working_directory\": \"/home/zach-linux/nexus\", \"assigned_task\": \"Analyze and improve this codebase\"}'",
+    "build_api": "curl -X POST http://localhost:9999/api/quick-actions/build-api/execute -H 'Content-Type: application/json' -d '{\"working_directory\": \"/tmp/myproject\"}'",
+    "write_tests": "curl -X POST http://localhost:9999/api/quick-actions/write-tests/execute -H 'Content-Type: application/json' -d '{\"working_directory\": \"/home/zach-linux/nexus\"}'",
+    "security_audit": "curl -X POST http://localhost:9999/api/quick-actions/security-audit/execute -H 'Content-Type: application/json' -d '{\"working_directory\": \"/home/zach-linux/nexus\"}'",
+    "kill_all_agents": "curl -X DELETE http://localhost:9999/api/agents",
+    "list_agents": "curl http://localhost:9999/api/agents",
+    "system_status": "curl http://localhost:9999/api/status",
+    "list_templates": "curl http://localhost:9999/api/templates",
+    "list_quick_actions": "curl http://localhost:9999/api/quick-actions"
+  }
+}

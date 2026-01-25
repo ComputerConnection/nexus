@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <circle cx="72" cy="72" r="40" fill="none" stroke="#00fff9" stroke-width="3"/>
+  <circle cx="72" cy="72" r="20" fill="#00fff9" opacity="0.3"/>
+  <circle cx="72" cy="72" r="8" fill="#00fff9"/>
+  <!-- Brain-like pattern -->
+  <path d="M52 62 Q62 52 72 62 Q82 52 92 62" fill="none" stroke="#00fff9" stroke-width="2"/>
+  <path d="M52 72 Q62 82 72 72 Q82 82 92 72" fill="none" stroke="#00fff9" stroke-width="2"/>
+  <path d="M52 82 Q62 72 72 82 Q82 72 92 82" fill="none" stroke="#00fff9" stroke-width="2"/>
+  <!-- Connection dots -->
+  <circle cx="32" cy="72" r="4" fill="#00fff9"/>
+  <circle cx="112" cy="72" r="4" fill="#00fff9"/>
+  <circle cx="72" cy="32" r="4" fill="#00fff9"/>
+  <circle cx="72" cy="112" r="4" fill="#00fff9"/>
+  <line x1="36" y1="72" x2="52" y2="72" stroke="#00fff9" stroke-width="1" opacity="0.5"/>
+  <line x1="92" y1="72" x2="108" y2="72" stroke="#00fff9" stroke-width="1" opacity="0.5"/>
+  <line x1="72" y1="36" x2="72" y2="52" stroke="#00fff9" stroke-width="1" opacity="0.5"/>
+  <line x1="72" y1="92" x2="72" y2="108" stroke="#00fff9" stroke-width="1" opacity="0.5"/>
+</svg>

@@ -1,0 +1,252 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "NEXUS Control",
+  "Version": "1.0.0",
+  "Author": "NEXUS Team",
+  "Description": "Control NEXUS multi-agent AI system from your Stream Deck. Spawn agents, execute quick actions, and monitor system status.",
+  "Icon": "images/nexus-plugin",
+  "URL": "https://github.com/nexus-ai/nexus",
+  "UUID": "me.nexus.streamdeck",
+  "SDKVersion": 2,
+  "CodePath": "plugin.js",
+  "Software": {
+    "MinimumVersion": "6.0"
+  },
+  "OS": [
+    {
+      "Platform": "linux",
+      "MinimumVersion": "1.0"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "10.15"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "18",
+    "Debug": "enabled"
+  },
+  "Category": "NEXUS AI",
+  "CategoryIcon": "images/nexus-category",
+  "Actions": [
+    {
+      "Name": "Spawn Orchestrator",
+      "UUID": "me.nexus.streamdeck.spawn-orchestrator",
+      "Icon": "icons/orchestrator",
+      "Tooltip": "Spawn an Orchestrator agent to coordinate tasks",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/orchestrator",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Spawn Architect",
+      "UUID": "me.nexus.streamdeck.spawn-architect",
+      "Icon": "icons/architect",
+      "Tooltip": "Spawn a Code Architect agent for system design",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/architect",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Spawn Implementer",
+      "UUID": "me.nexus.streamdeck.spawn-implementer",
+      "Icon": "icons/implementer",
+      "Tooltip": "Spawn an Implementation Specialist agent",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/implementer",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Spawn Tester",
+      "UUID": "me.nexus.streamdeck.spawn-tester",
+      "Icon": "icons/tester",
+      "Tooltip": "Spawn a Test Engineer agent",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/tester",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Spawn Security Auditor",
+      "UUID": "me.nexus.streamdeck.spawn-security",
+      "Icon": "icons/security",
+      "Tooltip": "Spawn a Security Auditor agent",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/security",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Spawn DevOps",
+      "UUID": "me.nexus.streamdeck.spawn-devops",
+      "Icon": "icons/devops",
+      "Tooltip": "Spawn a DevOps Engineer agent",
+      "PropertyInspectorPath": "property-inspector/spawn-agent.html",
+      "States": [
+        {
+          "Image": "icons/devops",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Build API",
+      "UUID": "me.nexus.streamdeck.quick-build-api",
+      "Icon": "icons/build-api",
+      "Tooltip": "Execute Build REST API quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/build-api",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Write Tests",
+      "UUID": "me.nexus.streamdeck.quick-write-tests",
+      "Icon": "icons/write-tests",
+      "Tooltip": "Execute Write Tests quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/write-tests",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Security Audit",
+      "UUID": "me.nexus.streamdeck.quick-security-audit",
+      "Icon": "icons/security-audit",
+      "Tooltip": "Execute Security Audit quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/security-audit",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Refactor",
+      "UUID": "me.nexus.streamdeck.quick-refactor",
+      "Icon": "icons/refactor",
+      "Tooltip": "Execute Refactor Code quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/refactor",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Generate Docs",
+      "UUID": "me.nexus.streamdeck.quick-docs",
+      "Icon": "icons/docs",
+      "Tooltip": "Execute Generate Documentation quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/docs",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Quick: Code Review",
+      "UUID": "me.nexus.streamdeck.quick-code-review",
+      "Icon": "icons/code-review",
+      "Tooltip": "Execute Code Review quick action",
+      "PropertyInspectorPath": "property-inspector/quick-action.html",
+      "States": [
+        {
+          "Image": "icons/code-review",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "System Status",
+      "UUID": "me.nexus.streamdeck.status",
+      "Icon": "icons/status",
+      "Tooltip": "Show NEXUS system status and agent count",
+      "PropertyInspectorPath": "property-inspector/status.html",
+      "States": [
+        {
+          "Image": "icons/status-ok",
+          "TitleAlignment": "bottom",
+          "FontSize": "12"
+        },
+        {
+          "Image": "icons/status-error",
+          "TitleAlignment": "bottom",
+          "FontSize": "12"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    },
+    {
+      "Name": "Kill All Agents",
+      "UUID": "me.nexus.streamdeck.kill-all",
+      "Icon": "icons/kill-all",
+      "Tooltip": "Kill all running agents",
+      "PropertyInspectorPath": "property-inspector/kill-all.html",
+      "States": [
+        {
+          "Image": "icons/kill-all",
+          "TitleAlignment": "bottom",
+          "FontSize": "10"
+        }
+      ],
+      "Controllers": ["Keypad"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Infinity/DevOps loop -->
+  <path d="M32 72 Q32 47 52 47 Q72 47 72 72 Q72 47 92 47 Q112 47 112 72 Q112 97 92 97 Q72 97 72 72 Q72 97 52 97 Q32 97 32 72" 
+        fill="none" stroke="#9945ff" stroke-width="3"/>
+  <!-- Gear -->
+  <circle cx="72" cy="72" r="12" fill="none" stroke="#9945ff" stroke-width="3"/>
+  <circle cx="72" cy="72" r="5" fill="#9945ff"/>
+</svg>

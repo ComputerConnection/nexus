@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Flask shape -->
+  <path d="M57 32 L57 55 L37 102 Q35 112 45 112 L99 112 Q109 112 107 102 L87 55 L87 32" 
+        fill="none" stroke="#ff6600" stroke-width="3"/>
+  <line x1="52" y1="32" x2="92" y2="32" stroke="#ff6600" stroke-width="3"/>
+  <!-- Liquid -->
+  <path d="M45 95 Q72 85 99 95 L99 107 Q99 110 96 110 L48 110 Q45 110 45 107 Z" 
+        fill="#ff6600" opacity="0.4"/>
+  <!-- Bubbles -->
+  <circle cx="60" cy="98" r="4" fill="#ff6600"/>
+  <circle cx="75" cy="92" r="3" fill="#ff6600"/>
+  <circle cx="85" cy="100" r="5" fill="#ff6600"/>
+</svg>

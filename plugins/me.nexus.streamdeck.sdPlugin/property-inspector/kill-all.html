@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>NEXUS Kill All</title>
+  <style>
+    :root {
+      --bg-color: #2d2d2d;
+      --text-color: #e0e0e0;
+      --border-color: #4a4a4a;
+      --accent-color: #ff0040;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 12px;
+    }
+    .nexus-logo {
+      text-align: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 12px;
+    }
+    .nexus-logo span {
+      color: #00fff9;
+      font-weight: bold;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
+    .warning-box {
+      background: rgba(255, 0, 64, 0.1);
+      border: 1px solid var(--accent-color);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .warning-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--accent-color);
+    }
+    .warning-text {
+      color: #ccc;
+      line-height: 1.5;
+    }
+    .info-box {
+      background: #1a1a1a;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 12px;
+    }
+    .info-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #888;
+    }
+    .info-text {
+      color: #666;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="nexus-logo">
+    <span>NEXUS</span>
+  </div>
+
+  <div class="warning-box">
+    <div class="warning-title">⚠️ Kill All Agents</div>
+    <div class="warning-text">
+      This button will immediately terminate ALL running agents.
+      <br><br>
+      Any in-progress tasks will be stopped. This action cannot be undone.
+      <br><br>
+      Use with caution!
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">API Endpoint</div>
+    <div class="info-text">
+      DELETE http://localhost:9999/api/agents
+    </div>
+  </div>
+
+  <script>
+    function connectElgatoStreamDeckSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+      const websocket = new WebSocket(`ws://127.0.0.1:${inPort}`);
+      websocket.onopen = () => {
+        websocket.send(JSON.stringify({
+          event: inRegisterEvent,
+          uuid: inPropertyInspectorUUID,
+        }));
+      };
+    }
+    window.connectElgatoStreamDeckSocket = connectElgatoStreamDeckSocket;
+  </script>
+</body>
+</html>

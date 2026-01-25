@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Skull simplified -->
+  <circle cx="72" cy="62" r="35" fill="none" stroke="#ff0040" stroke-width="3"/>
+  <circle cx="57" cy="55" r="8" fill="#ff0040"/>
+  <circle cx="87" cy="55" r="8" fill="#ff0040"/>
+  <path d="M62 82 L72 75 L82 82" fill="none" stroke="#ff0040" stroke-width="3"/>
+  <!-- Jaw -->
+  <path d="M47 77 L47 97 L57 97 L57 87 L67 87 L67 97 L77 97 L77 87 L87 87 L87 97 L97 97 L97 77" 
+        fill="none" stroke="#ff0040" stroke-width="3"/>
+</svg>

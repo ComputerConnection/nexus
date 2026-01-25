@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- Code brackets -->
+  <text x="30" y="85" font-family="monospace" font-size="50" fill="#39ff14">&lt;</text>
+  <text x="90" y="85" font-family="monospace" font-size="50" fill="#39ff14">/&gt;</text>
+  <!-- Code lines -->
+  <line x1="55" y1="55" x2="89" y2="55" stroke="#39ff14" stroke-width="3" opacity="0.5"/>
+  <line x1="60" y1="70" x2="84" y2="70" stroke="#39ff14" stroke-width="3" opacity="0.5"/>
+  <line x1="55" y1="85" x2="89" y2="85" stroke="#39ff14" stroke-width="3" opacity="0.5"/>
+</svg>

@@ -1,0 +1,42 @@
+[package]
+name = "nexus"
+version = "0.1.0"
+description = "NEXUS - Neural EXecution Unified System"
+authors = ["NEXUS Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "nexus_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.9", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+log = "0.4"
+parking_lot = "0.12"
+dashmap = "6.0"
+lazy_static = "1.4"
+
+# HTTP API server for OpenDeck/Stream Deck integration
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Optional database support
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono"], optional = true }
+
+[features]
+default = ["database"]
+database = ["sqlx"]

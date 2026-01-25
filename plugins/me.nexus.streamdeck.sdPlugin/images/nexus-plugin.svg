@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" fill="#0a0a0f"/>
+  <!-- NEXUS hexagon logo -->
+  <polygon points="72,12 122,42 122,102 72,132 22,102 22,42" 
+           fill="none" stroke="#00fff9" stroke-width="3"/>
+  <polygon points="72,27 107,49.5 107,94.5 72,117 37,94.5 37,49.5" 
+           fill="#00fff9" opacity="0.1"/>
+  <!-- N letter -->
+  <path d="M52 92 L52 52 L72 77 L92 52 L92 92" 
+        fill="none" stroke="#00fff9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Glow effect -->
+  <circle cx="72" cy="72" r="50" fill="none" stroke="#00fff9" stroke-width="1" opacity="0.3"/>
+</svg>
