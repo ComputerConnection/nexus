@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Component, type ReactNode } from 'react';
 import {
   Home,
   Bot,
@@ -8,13 +9,57 @@ import {
   Settings,
   Command,
   Zap,
+  ScrollText,
 } from 'lucide-react';
+
+// Error boundary to catch rendering errors
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-[#0a0a0f] text-white p-8">
+          <div className="max-w-2xl">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Something went wrong</h1>
+            <pre className="bg-gray-900 p-4 rounded-lg overflow-auto text-sm">
+              {this.state.error?.message}
+              {'\n\n'}
+              {this.state.error?.stack}
+            </pre>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-cyan-500 rounded-lg"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { CommandCenter } from './pages/CommandCenter';
 import { AgentGrid } from './pages/AgentGrid';
 import { WorkflowEditor } from './pages/WorkflowEditor';
 import { EnhancedWorkflowEditor } from './pages/EnhancedWorkflowEditor';
 import { ProjectHub } from './pages/ProjectHub';
-import { CommandPalette, useCommandPalette } from './components/ui/CommandPalette';
+import { Settings as SettingsPage } from './pages/Settings';
+import { RecipesPanel } from './components/RecipesPanel';
+import { CommandPalette } from './components/ui/CommandPalette';
+import { useCommandPalette } from './hooks/useCommandPalette';
 import { ToastProvider } from './components/ui/Toast';
 import { Tooltip } from './components/ui/Tooltip';
 import { clsx } from 'clsx';
@@ -24,6 +69,7 @@ const navItems = [
   { path: '/agents', icon: Bot, label: 'Agents' },
   { path: '/workflows', icon: GitBranch, label: 'Workflows' },
   { path: '/projects', icon: FolderKanban, label: 'Projects' },
+  { path: '/recipes', icon: ScrollText, label: 'Recipes' },
 ];
 
 function Sidebar() {
@@ -88,13 +134,29 @@ function Sidebar() {
           </motion.button>
         </Tooltip>
         <Tooltip content="Settings" side="right">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-          >
-            <Settings size={20} />
-          </motion.button>
+          <NavLink to="/settings">
+            {({ isActive }) => (
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={clsx(
+                  'relative w-12 h-12 rounded-xl flex items-center justify-center transition-colors',
+                  isActive
+                    ? 'text-[var(--neon-cyan)] bg-cyan-500/10'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                )}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNav"
+                    className="absolute left-0 w-1 h-6 bg-[var(--neon-cyan)] rounded-r-full"
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  />
+                )}
+                <Settings size={20} />
+              </motion.div>
+            )}
+          </NavLink>
         </Tooltip>
       </div>
     </aside>
@@ -169,6 +231,22 @@ function AppContent() {
               </PageTransition>
             }
           />
+          <Route
+            path="/recipes"
+            element={
+              <PageTransition>
+                <RecipesPanel />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PageTransition>
+                <SettingsPage />
+              </PageTransition>
+            }
+          />
         </Routes>
       </main>
 
@@ -183,8 +261,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
