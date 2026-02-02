@@ -77,14 +77,16 @@ export function Badge({
 }
 
 // Status badge with animated indicator
+type StatusType = 'running' | 'paused' | 'completed' | 'failed' | 'idle' | 'starting' | 'killed';
+
 interface StatusBadgeProps {
-  status: 'running' | 'paused' | 'completed' | 'failed' | 'idle' | 'starting';
+  status: StatusType | string; // Accept any string, will normalize to known statuses
   label?: string;
   size?: BadgeSize;
 }
 
 const statusConfig: Record<
-  StatusBadgeProps['status'],
+  StatusType,
   { variant: BadgeVariant; label: string; pulse: boolean }
 > = {
   running: { variant: 'green', label: 'Running', pulse: true },
@@ -93,10 +95,13 @@ const statusConfig: Record<
   failed: { variant: 'red', label: 'Failed', pulse: false },
   idle: { variant: 'default', label: 'Idle', pulse: false },
   starting: { variant: 'cyan', label: 'Starting', pulse: true },
+  killed: { variant: 'red', label: 'Killed', pulse: false },
 };
 
 export function StatusBadge({ status, label, size = 'md' }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  // Normalize status to lowercase for lookup
+  const normalizedStatus = (status?.toLowerCase() || 'idle') as StatusType;
+  const config = statusConfig[normalizedStatus] || statusConfig.idle;
   return (
     <Badge variant={config.variant} size={size} pulse={config.pulse}>
       {label || config.label}

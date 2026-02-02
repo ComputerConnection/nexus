@@ -1,0 +1,283 @@
+# NEXUS Handoff Template: Security Analyst
+# Use this template when security completes review
+
+handoff:
+  from_agent: security
+  to_agent: # implementer (for fixes) | tester (if approved) | architect (if design flaw)
+  timestamp: # ISO 8601 - filled by orchestrator
+  task_id: # Project/task identifier
+
+  #############################################
+  # SUMMARY - What did you review?
+  #############################################
+  summary:
+    what_was_done: |
+      # 2-3 sentences. What was reviewed?
+      # Example: "Completed security review of authentication implementation.
+      # Reviewed JWT handling, password storage, and input validation."
+
+    review_scope:
+      files_reviewed:
+        - # /src/auth/middleware.js
+        - # /src/routes/auth.js
+        - # /src/models/user.js
+
+      areas_examined:
+        - # Authentication flow
+        - # Input validation
+        - # Password handling
+        - # Token management
+
+    overall_assessment: # approved | approved_with_conditions | needs_fixes | rejected
+
+    risk_level: # low | medium | high | critical
+
+  #############################################
+  # FINDINGS - Security-specific
+  #############################################
+  findings:
+    critical:
+      # Must fix before ANY deployment
+      - id: SEC-001
+        title: # Brief title
+        severity: critical
+        location: # File and line number
+        description: |
+          # What's the vulnerability?
+        impact: |
+          # What could happen if exploited?
+        remediation: |
+          # How to fix it
+        references:
+          - # OWASP link, CVE, etc.
+
+    high:
+      # Must fix before production
+      - id: SEC-002
+        title:
+        severity: high
+        location:
+        description: |
+
+        impact: |
+
+        remediation: |
+
+        references:
+          -
+
+    medium:
+      # Should fix, can ship to staging
+      - id: SEC-003
+        title:
+        severity: medium
+        location:
+        description: |
+
+        impact: |
+
+        remediation: |
+
+        references:
+          -
+
+    low:
+      # Nice to fix, not blocking
+      - id: SEC-004
+        title:
+        severity: low
+        location:
+        description: |
+
+        remediation: |
+
+
+    informational:
+      # Observations, best practices, suggestions
+      - note: |
+          # Observation
+        suggestion: |
+          # Suggested improvement
+
+  #############################################
+  # POSITIVE FINDINGS
+  #############################################
+  positives:
+    # What was done well - important for morale and learning
+    - # Password hashing uses bcrypt with appropriate cost factor
+    - # JWT tokens have reasonable expiration
+    - # Input validation present on all endpoints
+
+  #############################################
+  # FIX REQUIREMENTS - For Implementer
+  #############################################
+  fix_requirements:
+    # This section is REQUIRED when handing off to implementer for fixes
+
+    must_fix:
+      # Fixes required before security will approve
+      - finding_id: SEC-001
+        fix_description: |
+          # Specific instructions for fix
+        acceptance_criteria: |
+          # How security will verify it's fixed
+        do_not: |
+          # What NOT to do while fixing
+
+      - finding_id: SEC-002
+        fix_description: |
+
+        acceptance_criteria: |
+
+        do_not: |
+
+
+    fix_scope:
+      # Explicit boundaries for fix work
+      in_scope:
+        - # Fix the specific vulnerabilities listed
+      out_of_scope:
+        - # Do not refactor surrounding code
+        - # Do not add new features
+        - # Do not "improve" things not flagged
+
+    fix_verification:
+      # How to verify fixes before handing back
+      - finding_id: SEC-001
+        test_command: # Command to verify fix
+        expected_result: # What should happen
+
+  #############################################
+  # CONTEXT FOR NEXT AGENT
+  #############################################
+  context_for_next_agent:
+    must_know:
+      - # Security constraints that must be maintained
+      - # Assumptions made during review
+      - #
+
+    original_intent: |
+      # Restate - security should not change this
+      # Just verifying implementation is secure
+
+    security_requirements:
+      # Security requirements for this system
+      - # Requirement from architecture or brief
+      - #
+
+    threat_model:
+      # What threats was this reviewed against?
+      assumed_attackers:
+        - # Unauthenticated external user
+        - # Authenticated malicious user
+        - # (Not: nation-state, insider threat - if those apply, note here)
+
+      out_of_scope_threats:
+        - # Physical access attacks
+        - # Social engineering
+        - #
+
+  #############################################
+  # STATUS
+  #############################################
+  status:
+    completion: complete  # complete | partial | blocked
+
+    approval_status: # approved | conditional | rejected
+
+    if_conditional:
+      conditions:
+        - # Condition that must be met
+      deadline: # When conditions must be met
+
+    if_rejected:
+      reason: |
+        # Why rejected
+      path_forward: |
+        # What needs to happen to get approval
+
+    if_blocked:
+      blocker: |
+        # What's blocking completion of review?
+      needs_from: # implementer | architect | human
+
+  #############################################
+  # NEXT STEPS
+  #############################################
+  next_steps:
+    for_implementer:
+      # If fixes needed
+      - # Fix SEC-001: [brief description]
+      - # Fix SEC-002: [brief description]
+      - # Then hand back to security for re-review
+
+    for_tester:
+      # If approved
+      - # Include security test cases
+      - # Test for [specific vulnerability] regression
+
+    for_devops:
+      # Security requirements for deployment
+      - # Ensure secrets are not in code
+      - # Configure [security feature]
+
+    for_architect:
+      # If design-level issues found
+      - # Reconsider [design decision]
+      - #
+
+    re_review_scope:
+      # What will security re-review after fixes
+      - # Only the fixed code, not entire codebase
+      - # Specific files: [list]
+
+    warnings:
+      - # Don't expand fix scope
+      - #
+
+  #############################################
+  # VERIFICATION
+  #############################################
+  verification:
+    how_fixes_will_be_verified: |
+      # How security will verify fixes
+
+    security_test_cases:
+      # Test cases QA should include
+      - test: # SQL injection on username field
+        method: # Input: ' OR '1'='1
+        expected: # Rejected, not executed
+
+      - test: # JWT tampering
+        method: # Modify token payload
+        expected: # Token rejected
+
+    penetration_test_needed: false  # true if formal pentest recommended
+
+    compliance_notes: |
+      # Any compliance considerations (HIPAA, PCI, etc.)
+      # N/A for most store projects
+
+  #############################################
+  # OPTIONAL SECTIONS
+  #############################################
+  deferred_security_items:
+    # Security improvements for later
+    - item: # Rate limiting
+      priority: high
+      reason_deferred: # MVP scope
+      implement_before: # Production launch
+
+  security_debt:
+    - item: # No account lockout
+      severity: medium
+      accepted_risk: |
+        # Why this risk is accepted for now
+      revisit_when: # Before scaling
+
+  questions_for_human:
+    - # Security question needing Zach's input
+
+  references:
+    - # OWASP guidelines used
+    - # Security documentation

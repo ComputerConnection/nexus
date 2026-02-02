@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useAgentStore } from '../stores/agentStore';
 import * as tauri from '../services/tauri';
 import type { UnlistenFn } from '@tauri-apps/api/event';
+import type { AgentStatus } from '../types';
 
 export function useAgentStream() {
   const { addOutput, updateAgentStatus, updateAgentProgress } = useAgentStore();
@@ -19,7 +20,7 @@ export function useAgentStream() {
 
       // Listen for agent status changes
       const unlistenStatus = await tauri.onAgentStatus((data) => {
-        updateAgentStatus(data.agentId, data.status as any);
+        updateAgentStatus(data.agentId, data.status as AgentStatus);
       });
       unlisteners.push(unlistenStatus);
 

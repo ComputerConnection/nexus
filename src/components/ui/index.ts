@@ -53,7 +53,12 @@ export {
 } from './Tabs';
 
 // Command Palette
-export { CommandPalette, useCommandPalette } from './CommandPalette';
+export { CommandPalette } from './CommandPalette';
+export { useCommandPalette } from '../../hooks/useCommandPalette';
 
 // Toast
-export { ToastProvider, toast } from './Toast';
+export { ToastProvider } from './Toast';
+export { toast } from './toast.utils';
+
+// Modal
+export { Modal, ModalContent, ModalFooter } from './Modal';

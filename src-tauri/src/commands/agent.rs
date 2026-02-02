@@ -1,4 +1,5 @@
 use crate::process::manager::{AgentConfig, AgentInfo, AgentManager, AgentStatus};
+use crate::process::registry::AGENT_REGISTRY;
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -80,23 +81,25 @@ pub async fn kill_agent(
 ) -> Result<(), String> {
     let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
 
-    if let Some((_, mut info)) = state.agents.remove(&id) {
-        // Kill by PID if available
-        if let Some(pid) = info.pid {
-            #[cfg(unix)]
-            {
-                use std::process::Command;
-                let _ = Command::new("kill")
-                    .arg("-9")
-                    .arg(pid.to_string())
-                    .output();
-            }
-        }
-        info.status = AgentStatus::Killed;
-        let _ = app.emit("agent-killed", agent_id);
+    // Use registry's graceful shutdown (SIGTERM then SIGKILL)
+    let killed = AGENT_REGISTRY.kill(&id);
+
+    if let Some(mut agent) = state.agents.get_mut(&id) {
+        agent.status = AgentStatus::Killed;
+    }
+
+    let _ = app.emit("agent-killed", &agent_id);
+
+    if killed {
         Ok(())
     } else {
-        Err("Agent not found".to_string())
+        // Agent might not be in registry but could be in state
+        if state.agents.contains_key(&id) {
+            state.agents.remove(&id);
+            Ok(())
+        } else {
+            Err("Agent not found".to_string())
+        }
     }
 }
 
@@ -130,8 +133,121 @@ pub async fn send_to_agent(
     agent_id: String,
     input: String,
 ) -> Result<(), String> {
-    // In a full implementation, this would send input to the agent's stdin
-    // For now, we just log it
-    log::info!("Sending to agent {}: {}", agent_id, input);
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    // Use PTY input for terminal-based agents, falls back to stdin
+    AGENT_REGISTRY.send_pty_input(&id, &input)
+}
+
+#[tauri::command]
+pub async fn restart_agent(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    agent_id: String,
+) -> Result<AgentResponse, String> {
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    // Get the stored config for this agent
+    let config = AGENT_REGISTRY
+        .get_config(&id)
+        .ok_or_else(|| "No config found for agent (cannot restart)".to_string())?;
+
+    // Kill the existing agent if still running
+    AGENT_REGISTRY.kill(&id);
+
+    // Remove from state
+    state.agents.remove(&id);
+
+    // Clean up registry
+    AGENT_REGISTRY.remove(&id);
+
+    // Spawn a new agent with the same config
+    let manager = AgentManager::new(app.clone());
+    let info = manager.spawn_agent(config)?;
+
+    let response = AgentResponse::from(&info);
+    state.agents.insert(info.id, info);
+
+    log::info!("Restarted agent {} as new agent {}", agent_id, response.id);
+
+    Ok(response)
+}
+
+#[tauri::command]
+pub async fn get_agent_output(
+    _state: State<'_, Arc<AppState>>,
+    agent_id: String,
+) -> Result<String, String> {
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    AGENT_REGISTRY
+        .get_output(&id)
+        .ok_or_else(|| "Agent not found or no output available".to_string())
+}
+
+#[tauri::command]
+pub async fn get_agent_runtime(
+    _state: State<'_, Arc<AppState>>,
+    agent_id: String,
+) -> Result<u64, String> {
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    AGENT_REGISTRY
+        .get_runtime(&id)
+        .map(|d| d.as_secs())
+        .ok_or_else(|| "Agent not found".to_string())
+}
+
+#[tauri::command]
+pub async fn pause_agent(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    agent_id: String,
+) -> Result<(), String> {
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    AGENT_REGISTRY.pause(&id)?;
+
+    // Update status in state
+    if let Some(mut agent) = state.agents.get_mut(&id) {
+        agent.status = AgentStatus::Paused;
+    }
+
+    // Emit status event
+    let _ = app.emit(
+        "agent-status",
+        serde_json::json!({
+            "agentId": agent_id,
+            "status": "Paused",
+        }),
+    );
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn resume_agent(
+    app: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    agent_id: String,
+) -> Result<(), String> {
+    let id = Uuid::parse_str(&agent_id).map_err(|e| format!("Invalid agent ID: {}", e))?;
+
+    AGENT_REGISTRY.resume(&id)?;
+
+    // Update status in state
+    if let Some(mut agent) = state.agents.get_mut(&id) {
+        agent.status = AgentStatus::Running;
+    }
+
+    // Emit status event
+    let _ = app.emit(
+        "agent-status",
+        serde_json::json!({
+            "agentId": agent_id,
+            "status": "Running",
+        }),
+    );
+
     Ok(())
 }

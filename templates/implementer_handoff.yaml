@@ -1,0 +1,301 @@
+# NEXUS Handoff Template: Full-Stack Developer (Implementer)
+# Use this template when implementer completes coding work
+
+handoff:
+  from_agent: implementer
+  to_agent: # security | tester | devops | architect (if escalating)
+  timestamp: # ISO 8601 - filled by orchestrator
+  task_id: # Project/task identifier
+
+  #############################################
+  # SUMMARY - What did you build?
+  #############################################
+  summary:
+    what_was_done: |
+      # 2-3 sentences. What was implemented?
+      # Example: "Implemented JWT authentication with register/login endpoints.
+      # Added middleware for protected routes. SQLite user storage working."
+
+    decisions_made:
+      # Implementation decisions (not architectural - those came from architect)
+
+      - decision: # What was decided during implementation
+        rationale: # Why this approach
+        alternatives_rejected:
+          - # Option not taken and why
+
+    current_state:
+      files_modified:
+        - # /src/auth/middleware.js
+        - # /src/routes/auth.js
+      files_created:
+        - # /src/models/user.js
+        - # /src/utils/jwt.js
+      dependencies_added:
+        - name: # package name
+          version: # version
+          purpose: # why added
+      config_changes:
+        - # Added JWT_SECRET to .env.example
+      database_changes:
+        - # Created users table
+
+  #############################################
+  # IMPLEMENTATION DETAILS - Implementer-specific
+  #############################################
+  implementation:
+    architecture_followed: |
+      # Confirm you followed the architect's design
+      # "Implemented as specified in /docs/auth-architecture.md"
+      # Or note any deviations with justification
+
+    deviations_from_design:
+      # If you deviated from architect's design, document here
+      - what: # What was different
+        why: # Why deviation was necessary
+        approved_by: # architect | human | "needs review"
+
+    key_files:
+      # Most important files for reviewer to understand
+      - path: # /src/auth/middleware.js
+        purpose: # JWT validation middleware
+        entry_point: true  # Is this a main entry point?
+
+      - path:
+        purpose:
+        entry_point: false
+
+    api_endpoints_implemented:
+      - endpoint: # POST /auth/register
+        status: complete  # complete | partial | stubbed
+        notes: # Any notes
+
+      - endpoint: # POST /auth/login
+        status: complete
+        notes:
+
+    external_dependencies:
+      # What external services/APIs does this code call?
+      - service: # None for local-only, or list external calls
+        purpose:
+        failure_handling: # What happens if it's unavailable?
+
+  #############################################
+  # SECURITY CONTEXT - For Security Analyst
+  #############################################
+  security_context:
+    # This section is REQUIRED when handing off to security
+
+    user_inputs:
+      # All places where external/user data enters the system
+      - input: # username field
+        source: # POST body
+        validation: # How it's validated
+        sanitization: # How it's sanitized
+
+      - input: # password field
+        source: # POST body
+        validation: # Min length, complexity
+        sanitization: # N/A - hashed immediately
+
+    authentication:
+      method: # JWT | session | API key | etc
+      token_storage: # Where tokens are stored client-side (recommendation)
+      token_lifetime: # Expiration
+      refresh_mechanism: # How tokens refresh
+
+    authorization:
+      method: # Role-based | permission-based | none yet
+      implementation: # How it's checked
+
+    data_storage:
+      sensitive_data:
+        - field: # password
+          storage: # bcrypt hashed
+          encryption: # at-rest encryption?
+
+      - field: # user email
+        storage: # plaintext in SQLite
+        encryption: # none
+
+    known_security_considerations:
+      # Things you know security should look at
+      - # Rate limiting not implemented yet
+      - # No account lockout after failed attempts
+
+  #############################################
+  # TESTING CONTEXT - For QA Engineer
+  #############################################
+  testing_context:
+    # This section is REQUIRED when handing off to tester
+
+    what_to_test:
+      - feature: # User registration
+        test_type: # unit | integration | e2e
+        priority: high  # high | medium | low
+
+      - feature: # User login
+        test_type: integration
+        priority: high
+
+      - feature: # JWT middleware
+        test_type: unit
+        priority: high
+
+    how_to_test:
+      setup_required: |
+        # Steps to set up test environment
+        # 1. Copy .env.example to .env
+        # 2. Run npm install
+        # 3. Run npm run db:migrate
+
+      test_commands:
+        - command: # npm test
+          purpose: # Run all tests
+        - command: # npm run test:auth
+          purpose: # Run auth tests only
+
+      test_data:
+        # Sample data for testing
+        valid_user:
+          username: "testuser"
+          password: "Test123!@#"
+        invalid_inputs:
+          - # Empty username
+          - # Password too short
+
+    expected_behaviors:
+      - scenario: # Valid registration
+        input: # Valid username and password
+        expected_output: # 201 status, user created
+
+      - scenario: # Duplicate registration
+        input: # Same username twice
+        expected_output: # 409 conflict
+
+      - scenario: # Invalid login
+        input: # Wrong password
+        expected_output: # 401 unauthorized
+
+    what_not_to_test:
+      # Explicitly out of scope for this round
+      - # Role-based permissions (not implemented)
+      - # Password reset (not implemented)
+      - # Performance/load testing
+
+    known_limitations:
+      # Things that might look like bugs but aren't
+      - # No email validation - intentional for MVP
+      - # No password reset - out of scope
+
+  #############################################
+  # CONTEXT FOR NEXT AGENT
+  #############################################
+  context_for_next_agent:
+    must_know:
+      - # Critical fact
+      - # Critical fact
+      - # Critical fact
+
+    original_intent: |
+      # Restate from architect handoff or ORIGINAL_BRIEF.md
+      # Keep this consistent through the chain
+
+    scope_boundaries:
+      in_scope:
+        - # What was in scope for this implementation
+      out_of_scope:
+        - # What was explicitly not implemented
+
+  #############################################
+  # STATUS
+  #############################################
+  status:
+    completion: complete  # complete | partial | blocked
+
+    if_partial:
+      remaining_work:
+        - # What still needs to be built
+      why_stopping: |
+        # Why hand off now?
+      blocking_next_agent: false  # Can next agent start, or must this finish first?
+
+    if_blocked:
+      blocker: |
+        # What's blocking?
+      needs_from: # human | architect | other
+      unblock_criteria: |
+        # What needs to happen?
+
+  #############################################
+  # NEXT STEPS
+  #############################################
+  next_steps:
+    for_security:
+      - # Review JWT implementation
+      - # Check password hashing
+      - # Verify input validation
+
+    for_tester:
+      - # Test registration flow
+      - # Test login flow
+      - # Test token validation
+
+    for_devops:
+      - # Set up JWT_SECRET in production
+      - # Configure database
+
+    warnings:
+      - # Don't test with production data
+      - # Rate limiting needed before production
+
+  #############################################
+  # VERIFICATION
+  #############################################
+  verification:
+    how_to_verify: |
+      # How to confirm implementation works
+
+    manual_test_steps:
+      - step: 1
+        action: # Start server
+        command: # npm run dev
+        expected: # Server starts on port 3000
+
+      - step: 2
+        action: # Register user
+        command: # curl -X POST http://localhost:3000/auth/register -H "Content-Type: application/json" -d '{"username":"test","password":"Test123!"}'
+        expected: # 201 response with user ID
+
+      - step: 3
+        action: # Login
+        command: # curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" -d '{"username":"test","password":"Test123!"}'
+        expected: # 200 response with JWT token
+
+    definition_of_done:
+      - # All endpoints return expected responses
+      - # Passwords are hashed in database
+      - # Invalid tokens are rejected
+
+  #############################################
+  # OPTIONAL SECTIONS
+  #############################################
+  technical_debt:
+    - item: # What was deferred or done quick-and-dirty
+      reason: # Why
+      severity: medium  # low | medium | high
+      ticket: # Reference if logged somewhere
+
+  code_smells:
+    # Things you're not proud of but shipped anyway
+    - location: # /src/auth/middleware.js:45
+      issue: # Error handling is basic
+      suggested_fix: # Add proper error types
+
+  questions_for_human:
+    - # Question needing Zach's input
+
+  dependencies_to_watch:
+    # Packages with known issues or that need monitoring
+    - package: # jsonwebtoken
+      concern: # Check for security advisories

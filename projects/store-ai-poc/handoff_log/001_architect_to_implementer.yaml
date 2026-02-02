@@ -1,0 +1,412 @@
+handoff:
+  from_agent: architect
+  to_agent: implementer
+  timestamp: "2026-01-25T21:00:00Z"
+  task_id: store-ai-poc
+
+  summary:
+    what_was_done: |
+      Designed the architecture for Computer Connection's local AI server POC.
+      Chose a simple, maintainable stack: Ollama for LLM, FastAPI for backend,
+      simple HTML/JS frontend, SQLite for storage, and ChromaDB for vector search.
+      Prioritized "Zach can maintain this" over architectural elegance.
+
+    decisions_made:
+      - decision: Use Ollama for local LLM inference
+        rationale: |
+          Simple to install, good model support, active community, runs well on consumer GPUs.
+          Zach can swap models easily without code changes.
+        alternatives_rejected:
+          - "llama.cpp direct: More complex setup, less user-friendly"
+          - "vLLM: Overkill for single-user POC, harder to maintain"
+          - "LocalAI: Less mature, smaller community"
+
+      - decision: Use FastAPI for backend API
+        rationale: |
+          Python is readable for Zach with AI assistance. FastAPI is simple,
+          well-documented, and has automatic OpenAPI docs. Easy to extend.
+        alternatives_rejected:
+          - "Flask: Less modern, no async support"
+          - "Node/Express: Different language, Zach more familiar with Python from AI work"
+          - "Go: Faster but harder for Zach to modify"
+
+      - decision: Simple HTML/JS frontend (no framework)
+        rationale: |
+          POC doesn't need React/Vue complexity. Plain HTML/JS is maintainable,
+          loads fast, and Zach can modify with AI help. Can upgrade to framework later.
+        alternatives_rejected:
+          - "React: Overkill for POC, adds build complexity"
+          - "Streamlit: Python-only but limited customization"
+
+      - decision: ChromaDB for vector storage (RAG)
+        rationale: |
+          Simple Python API, embeds with the app, no separate server needed.
+          Good enough for POC document counts. SQLite backend is easy to backup.
+        alternatives_rejected:
+          - "Pinecone: Cloud-based, violates LOCAL ONLY"
+          - "Weaviate: More complex setup"
+          - "pgvector: Would need PostgreSQL, more ops burden"
+
+      - decision: SQLite for application data
+        rationale: |
+          Zero configuration, file-based, easy backup, good enough for single-user.
+          Can migrate to PostgreSQL in Phase 3 if needed for multi-tenant.
+        alternatives_rejected:
+          - "PostgreSQL: Overkill for POC"
+          - "MongoDB: Different paradigm, no clear benefit"
+
+      - decision: No Docker for POC deployment
+        rationale: |
+          Direct install is simpler to debug and understand. Zach can see what's running.
+          Docker adds a layer of abstraction that complicates troubleshooting.
+          Can containerize in Phase 3 for client deployments.
+        alternatives_rejected:
+          - "Docker: Adds complexity for POC phase"
+          - "Docker Compose: Even more complexity"
+
+    current_state:
+      files_created:
+        - /home/zach-linux/nexus/projects/store-ai-poc/artifacts/architecture.md
+        - /home/zach-linux/nexus/projects/store-ai-poc/artifacts/api-spec.yaml
+      files_modified: []
+      dependencies_added: []
+      config_changes: []
+
+  architecture:
+    overview: |
+      Simple three-tier architecture optimized for maintainability:
+
+      [User Browser] → [FastAPI Backend] → [Ollama LLM]
+                              ↓
+                    [ChromaDB + SQLite]
+
+      Single server deployment. All components run on the same machine.
+      No external network calls for core functionality.
+
+    components:
+      - name: ollama-service
+        purpose: Local LLM inference
+        technology: Ollama with llama3.1:8b or mistral:7b
+        interfaces: HTTP API on localhost:11434
+        notes: Pre-installed, pulls models on first use
+
+      - name: api-server
+        purpose: Backend API handling chat, RAG, and data queries
+        technology: Python 3.11+, FastAPI, uvicorn
+        interfaces: HTTP API on localhost:8000
+        notes: Main application logic lives here
+
+      - name: web-frontend
+        purpose: User interface for staff interaction
+        technology: HTML, vanilla JS, Tailwind CSS (CDN)
+        interfaces: Served by FastAPI on /
+        notes: Single page app, no build step
+
+      - name: vector-store
+        purpose: Document embeddings for SOP retrieval
+        technology: ChromaDB (embedded mode)
+        interfaces: Python library, no separate server
+        notes: Stores embeddings in ./data/chroma/
+
+      - name: app-database
+        purpose: Chat history, audit logs, user sessions
+        technology: SQLite
+        interfaces: Python sqlite3 / SQLAlchemy
+        notes: Single file at ./data/store-ai.db
+
+    data_flow: |
+      1. User asks question via web interface
+      2. Frontend POSTs to /api/chat
+      3. Backend classifies query type (SOP lookup vs data query vs general)
+      4. For SOP queries:
+         - Query ChromaDB for relevant document chunks
+         - Include chunks in LLM prompt as context
+         - Send to Ollama for response
+      5. For data queries:
+         - Parse query intent
+         - Query SQLite for relevant data (pre-imported from CSVs)
+         - Include data in LLM prompt
+         - Send to Ollama for response
+      6. Log query and response to audit table
+      7. Return response to frontend
+      8. Frontend displays response
+
+    api_endpoints:
+      - endpoint: GET /
+        method: GET
+        purpose: Serve web frontend
+        auth: None (POC)
+
+      - endpoint: POST /api/chat
+        method: POST
+        purpose: Main chat endpoint
+        request_shape: |
+          { "message": "string", "session_id": "string" }
+        response_shape: |
+          { "response": "string", "sources": ["string"], "query_type": "string" }
+
+      - endpoint: POST /api/documents/upload
+        method: POST
+        purpose: Upload SOP documents for RAG
+        request_shape: multipart/form-data with file
+        response_shape: |
+          { "document_id": "string", "chunks": number }
+
+      - endpoint: GET /api/documents
+        method: GET
+        purpose: List uploaded documents
+        response_shape: |
+          { "documents": [{ "id": "string", "name": "string", "uploaded": "datetime" }] }
+
+      - endpoint: POST /api/data/import
+        method: POST
+        purpose: Import CSV data (sales, etc.)
+        request_shape: multipart/form-data with file, data_type param
+        response_shape: |
+          { "rows_imported": number, "data_type": "string" }
+
+      - endpoint: GET /api/health
+        method: GET
+        purpose: Health check for monitoring
+        response_shape: |
+          { "status": "ok", "ollama": "connected", "db": "connected" }
+
+    data_models:
+      - model: ChatMessage
+        purpose: Store chat history
+        key_fields:
+          - id: UUID
+          - session_id: string
+          - role: string (user/assistant)
+          - content: text
+          - created_at: datetime
+
+      - model: Document
+        purpose: Track uploaded SOP documents
+        key_fields:
+          - id: UUID
+          - filename: string
+          - content_hash: string
+          - chunk_count: integer
+          - uploaded_at: datetime
+
+      - model: AuditLog
+        purpose: Track all queries for audit
+        key_fields:
+          - id: UUID
+          - session_id: string
+          - query: text
+          - query_type: string
+          - response_preview: string (first 200 chars)
+          - created_at: datetime
+
+      - model: SalesData
+        purpose: Imported sales data for queries
+        key_fields:
+          - id: UUID
+          - date: date
+          - amount: decimal
+          - description: string
+          - category: string
+          - imported_at: datetime
+
+    non_functional_requirements:
+      performance:
+        - LLM response within 30 seconds (acceptable for POC)
+        - Frontend loads in under 2 seconds
+        - Document upload processes within 1 minute
+      security:
+        - All traffic on localhost or local network only
+        - No authentication for POC (single user, trusted network)
+        - Audit logging of all queries
+      scalability:
+        - Not a concern for POC (single user, single store)
+      offline_capability:
+        - Must work with no internet after initial setup
+        - Models cached locally via Ollama
+
+  context_for_next_agent:
+    must_know:
+      - This is a POC - optimize for "works" over "perfect"
+      - LOCAL ONLY is non-negotiable - no external API calls
+      - Zach will maintain this - keep code readable and simple
+      - No Docker for POC - direct install on Linux
+      - Use Ollama's default port (11434) - it's already installed
+      - ChromaDB runs embedded, no separate server
+      - Single SQLite database file for simplicity
+
+    original_intent: |
+      Build a locally hosted AI server POC for Computer Connection that:
+      1. Answers questions about store operations using local data
+      2. Provides store SOPs to staff on demand
+      3. Runs entirely on-premises with no cloud dependencies
+
+      This validates the approach before productizing for local SMB clients.
+      Success = Zach can demo this to a potential client.
+
+    scope_boundaries:
+      in_scope:
+        - Ollama integration for LLM
+        - FastAPI backend with chat endpoint
+        - Simple web frontend (HTML/JS)
+        - ChromaDB for SOP document RAG
+        - SQLite for chat history and imported data
+        - CSV import for sales/bookkeeping data
+        - Health check endpoint
+        - Basic audit logging
+      out_of_scope:
+        - User authentication (POC is single-user on trusted network)
+        - Real-time POS integration (CSV import only)
+        - Foot traffic tracking
+        - Mobile app
+        - Voice interface
+        - Docker/containerization
+        - Multi-tenant architecture
+        - Complex analytics dashboards
+        - Automated actions (read-only queries)
+
+    assumptions:
+      - Ollama is already installed or easily installable
+      - RTX GPU available for inference
+      - Python 3.11+ available on system
+      - Store network allows local HTTP traffic
+
+  status:
+    completion: complete
+
+  next_steps:
+    implementation_order:
+      - priority: 1
+        task: Set up project structure and dependencies
+        notes: |
+          Create /home/zach-linux/store-ai-poc/ with:
+          - /app (FastAPI application)
+          - /data (SQLite, ChromaDB storage)
+          - /static (frontend files)
+          - requirements.txt
+          - run.sh (startup script)
+
+      - priority: 2
+        task: Implement Ollama integration
+        notes: |
+          Create simple wrapper to call Ollama API.
+          Test with basic prompt before adding RAG.
+          Use llama3.1:8b as default model.
+
+      - priority: 3
+        task: Implement basic chat endpoint
+        notes: |
+          POST /api/chat that sends to Ollama and returns response.
+          No RAG yet - just basic chat to verify flow works.
+
+      - priority: 4
+        task: Implement web frontend
+        notes: |
+          Simple chat interface. Input box, send button, message history.
+          Use Tailwind via CDN for styling (no build step).
+
+      - priority: 5
+        task: Implement document upload and ChromaDB RAG
+        notes: |
+          Upload endpoint for PDFs/markdown.
+          Chunk documents, generate embeddings, store in ChromaDB.
+          Modify chat endpoint to retrieve relevant chunks.
+
+      - priority: 6
+        task: Implement CSV data import
+        notes: |
+          Import endpoint for sales data CSV.
+          Store in SQLite sales_data table.
+          Add query classification to detect data questions.
+
+      - priority: 7
+        task: Add audit logging
+        notes: |
+          Log all queries to audit_log table.
+          Include timestamp, query, response preview.
+
+      - priority: 8
+        task: Add health check endpoint
+        notes: |
+          GET /api/health returns status of Ollama, DB, ChromaDB.
+
+    suggested_approach: |
+      Start with priorities 1-4 to get a working chat interface.
+      Demo that to validate the basic flow works.
+      Then add RAG (5) and data queries (6) incrementally.
+
+      Test after each priority level. Don't build everything then test.
+
+    warnings:
+      - Do NOT add authentication - it's out of scope for POC
+      - Do NOT use Docker - direct install is simpler for POC
+      - Do NOT integrate directly with POS - use CSV export
+      - Do NOT optimize for performance yet - make it work first
+      - Do NOT add features from Phase 2/3 even if they seem easy
+
+    do_not:
+      - Add user authentication or login
+      - Create Docker containers
+      - Use React/Vue/Angular for frontend
+      - Connect directly to POS system
+      - Add real-time data sync
+      - Implement multi-user sessions
+      - Add role-based permissions
+      - Create complex analytics
+
+  verification:
+    how_to_verify_implementation: |
+      After each priority level, verify:
+
+      P1: Project structure exists, pip install -r requirements.txt works
+      P2: Can call Ollama from Python and get response
+      P3: POST /api/chat returns LLM response
+      P4: Can open browser, type message, see response
+      P5: Can upload document, ask about its content, get relevant answer
+      P6: Can import CSV, ask "what were sales last week", get answer
+      P7: audit_log table has entries after queries
+      P8: GET /api/health returns status of all components
+
+    acceptance_criteria:
+      - Zach can start the server with a single command
+      - Zach can open browser and chat with AI
+      - AI can answer SOP questions after document upload
+      - AI can answer sales questions after CSV import
+      - No external network calls during normal operation
+      - Server runs without crashing for basic usage
+
+    test_scenarios:
+      - scenario: Basic chat
+        input: "Hello, are you working?"
+        expected: LLM responds conversationally
+
+      - scenario: SOP query (after upload)
+        input: "How do we handle a customer return?"
+        expected: Response includes content from return policy document
+
+      - scenario: Data query (after import)
+        input: "What were total sales last Tuesday?"
+        expected: Response includes actual number from imported data
+
+  technical_debt:
+    - item: No authentication
+      reason: POC on trusted network, adds complexity
+      severity: medium
+      revisit_when: Before deploying for clients (Phase 3)
+
+    - item: No HTTPS
+      reason: Local network only, adds cert complexity
+      severity: low
+      revisit_when: Before deploying for clients
+
+    - item: Hardcoded model name
+      reason: Simpler for POC
+      severity: low
+      revisit_when: When need model flexibility
+
+  questions_for_human: []
+
+  references:
+    - "Ollama docs: https://ollama.ai/docs"
+    - "FastAPI docs: https://fastapi.tiangolo.com/"
+    - "ChromaDB docs: https://docs.trychroma.com/"

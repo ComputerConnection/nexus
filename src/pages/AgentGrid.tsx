@@ -14,6 +14,7 @@ import {
   Trash2,
   Maximize2,
   Terminal,
+  RotateCcw,
 } from 'lucide-react';
 import {
   Card,
@@ -25,10 +26,12 @@ import {
   DropdownSeparator,
   SkeletonAgentCard,
   Tooltip,
+  toast,
 } from '../components/ui';
-import { toast } from '../components/ui/Toast';
+import type { Agent } from '../types';
 import { useAgentStore } from '../stores/agentStore';
 import { useAgentStream, useAgentOutput } from '../hooks';
+import * as tauri from '../services/tauri';
 
 type Layout = '1x1' | '2x2' | '3x3' | '2x1';
 
@@ -49,15 +52,20 @@ export function AgentGrid() {
   }, [fetchAgents]);
 
   const handleSpawnAgent = async () => {
+    // Prompt user for working directory
+    const workingDir = prompt('Working directory:', '/home');
+    if (!workingDir) return;
+
+    const agentName = `Agent-${Date.now().toString(36)}`;
     try {
       await spawnAgent({
-        name: `Agent-${Date.now().toString(36)}`,
+        name: agentName,
         role: 'implementer',
-        workingDirectory: '/tmp',
+        workingDirectory: workingDir,
         assignedTask: 'Awaiting task assignment',
       });
-      toast.agentSpawned(`Agent-${Date.now().toString(36)}`);
-    } catch (error) {
+      toast.agentSpawned(agentName);
+    } catch {
       toast.error('Failed to spawn agent');
     }
   };
@@ -66,8 +74,41 @@ export function AgentGrid() {
     try {
       await killAgent(agentId);
       toast.agentKilled(agentName);
-    } catch (error) {
+    } catch {
       toast.error('Failed to kill agent');
+    }
+  };
+
+  const handlePauseAgent = async (agentId: string, agentName: string) => {
+    try {
+      await tauri.pauseAgent(agentId);
+      toast.success(`Paused ${agentName}`);
+    } catch (error) {
+      toast.error('Failed to pause agent', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  const handleResumeAgent = async (agentId: string, agentName: string) => {
+    try {
+      await tauri.resumeAgent(agentId);
+      toast.success(`Resumed ${agentName}`);
+    } catch (error) {
+      toast.error('Failed to resume agent', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  const handleRestartAgent = async (agentId: string, agentName: string) => {
+    try {
+      await tauri.restartAgent(agentId);
+      toast.success(`Restarted ${agentName}`);
+    } catch (error) {
+      toast.error('Failed to restart agent', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   };
 
@@ -177,6 +218,9 @@ export function AgentGrid() {
                   <AgentTerminalCard
                     agent={agent}
                     onKill={() => handleKillAgent(agent.id, agent.name)}
+                    onPause={() => handlePauseAgent(agent.id, agent.name)}
+                    onResume={() => handleResumeAgent(agent.id, agent.name)}
+                    onRestart={() => handleRestartAgent(agent.id, agent.name)}
                   />
                 </motion.div>
               ))}
@@ -230,11 +274,14 @@ function getMaxAgents(layout: Layout): number {
 }
 
 interface AgentTerminalCardProps {
-  agent: any;
+  agent: Agent;
   onKill: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onRestart: () => void;
 }
 
-function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
+function AgentTerminalCard({ agent, onKill, onPause, onResume, onRestart }: AgentTerminalCardProps) {
   const outputs = useAgentOutput(agent.id);
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -245,7 +292,8 @@ function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
     }
   }, [outputs]);
 
-  const isRunning = agent.status.toLowerCase() === 'running' || agent.status.toLowerCase() === 'starting';
+  const isRunning = agent.status === 'running' || agent.status === 'starting';
+  const isPaused = agent.status === 'paused';
 
   return (
     <Card padding="none" className="h-full flex flex-col overflow-hidden">
@@ -263,7 +311,7 @@ function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {agent.name}
           </span>
-          <StatusBadge status={agent.status.toLowerCase()} size="sm" />
+          <StatusBadge status={agent.status} size="sm" />
         </div>
 
         <div className="flex items-center gap-1">
@@ -279,8 +327,19 @@ function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
               </Button>
             }
           >
-            <DropdownItem icon={<Pause size={14} />}>Pause</DropdownItem>
-            <DropdownItem icon={<Play size={14} />}>Resume</DropdownItem>
+            {isRunning && (
+              <DropdownItem icon={<Pause size={14} />} onSelect={onPause}>
+                Pause
+              </DropdownItem>
+            )}
+            {isPaused && (
+              <DropdownItem icon={<Play size={14} />} onSelect={onResume}>
+                Resume
+              </DropdownItem>
+            )}
+            <DropdownItem icon={<RotateCcw size={14} />} onSelect={onRestart}>
+              Restart
+            </DropdownItem>
             <DropdownSeparator />
             <DropdownItem icon={<Trash2 size={14} />} danger onSelect={onKill}>
               Kill Agent
@@ -292,37 +351,32 @@ function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
       {/* Terminal Body */}
       <div
         ref={terminalRef}
-        className="flex-1 bg-[var(--bg-primary)] p-4 font-mono text-sm overflow-auto"
+        className="flex-1 bg-[var(--bg-primary)] font-mono text-sm overflow-hidden flex flex-col"
       >
         {/* Task header */}
-        <div className="text-[var(--text-tertiary)] mb-2">
-          <span className="text-[var(--neon-green)]">$</span> {agent.assignedTask || 'Awaiting task...'}
-        </div>
-        <div className="text-[var(--text-secondary)] mb-3 pb-3 border-b border-[var(--glass-border)]">
-          <span className="text-[var(--neon-cyan)]">[{agent.role}]</span> Agent started
+        <div className="p-4 pb-0">
+          <div className="text-[var(--text-tertiary)] mb-2">
+            <span className="text-[var(--neon-green)]">$</span> {agent.assignedTask || 'Awaiting task...'}
+          </div>
+          <div className="text-[var(--text-secondary)] mb-3 pb-3 border-b border-[var(--glass-border)]">
+            <span className="text-[var(--neon-cyan)]">[{agent.role}]</span> Agent started
+          </div>
         </div>
 
-        {/* Output lines */}
-        {outputs.length > 0 ? (
-          <div className="space-y-0.5">
-            {outputs.map((line, idx) => (
-              <div
-                key={idx}
-                className="text-[var(--text-secondary)] whitespace-pre-wrap break-all leading-relaxed"
-              >
-                {line}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-[var(--text-tertiary)] italic">
-            Waiting for output...
-          </div>
-        )}
+        {/* Virtualized output lines */}
+        <div className="flex-1 px-4 min-h-0">
+          {outputs.length > 0 ? (
+            <VirtualizedTerminalOutput outputs={outputs} isRunning={isRunning} />
+          ) : (
+            <div className="text-[var(--text-tertiary)] italic py-2">
+              Waiting for output...
+            </div>
+          )}
+        </div>
 
         {/* Cursor */}
-        {isRunning && (
-          <div className="mt-2 flex items-center gap-2">
+        {isRunning && outputs.length > 0 && (
+          <div className="px-4 pb-2 flex items-center gap-2">
             <div className="w-2 h-4 bg-[var(--neon-cyan)] animate-pulse" />
           </div>
         )}
@@ -344,7 +398,7 @@ function AgentTerminalCard({ agent, onKill }: AgentTerminalCardProps) {
 }
 
 interface AgentSidebarCardProps {
-  agent: any;
+  agent: Agent;
   onKill?: () => void;
 }
 
@@ -360,7 +414,7 @@ function AgentSidebarCard({ agent }: AgentSidebarCardProps) {
             <h4 className="text-sm font-medium text-[var(--text-primary)] truncate">
               {agent.name}
             </h4>
-            <StatusBadge status={agent.status.toLowerCase()} size="sm" />
+            <StatusBadge status={agent.status} size="sm" />
           </div>
           <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
             {agent.role}
@@ -369,6 +423,132 @@ function AgentSidebarCard({ agent }: AgentSidebarCardProps) {
         </div>
       </div>
     </Card>
+  );
+}
+
+// Optimized terminal output - limits rendered lines for performance
+const MAX_VISIBLE_LINES = 500;
+
+function VirtualizedTerminalOutput({ outputs }: { outputs: string[]; isRunning?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  // Auto-scroll to bottom when new output arrives
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [outputs.length]);
+
+  // Determine which lines to show
+  const linesToShow = showAll || outputs.length <= MAX_VISIBLE_LINES
+    ? outputs
+    : outputs.slice(-MAX_VISIBLE_LINES);
+
+  const hiddenCount = outputs.length - linesToShow.length;
+
+  return (
+    <div ref={containerRef} className="h-full overflow-auto">
+      {hiddenCount > 0 && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="text-xs text-[var(--neon-cyan)] hover:underline mb-2 block"
+        >
+          ... {hiddenCount} older lines hidden. Click to show all.
+        </button>
+      )}
+      <div className="space-y-0.5">
+        {linesToShow.map((line, idx) => (
+          <TerminalLine key={showAll ? idx : idx + hiddenCount} line={line} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Terminal line with syntax highlighting
+function TerminalLine({ line }: { line: string }) {
+  // Detect line type and apply appropriate styling
+  const lineLower = line.toLowerCase();
+
+  // Error detection
+  if (
+    lineLower.includes('error') ||
+    lineLower.includes('failed') ||
+    lineLower.includes('fatal') ||
+    lineLower.includes('exception')
+  ) {
+    return (
+      <div className="text-red-400 whitespace-pre-wrap break-all leading-relaxed">
+        {line}
+      </div>
+    );
+  }
+
+  // Warning detection
+  if (lineLower.includes('warning') || lineLower.includes('warn')) {
+    return (
+      <div className="text-yellow-400 whitespace-pre-wrap break-all leading-relaxed">
+        {line}
+      </div>
+    );
+  }
+
+  // Success detection
+  if (
+    lineLower.includes('success') ||
+    lineLower.includes('completed') ||
+    lineLower.includes('passed') ||
+    lineLower.includes('done')
+  ) {
+    return (
+      <div className="text-green-400 whitespace-pre-wrap break-all leading-relaxed">
+        {line}
+      </div>
+    );
+  }
+
+  // System/info messages (starting with emoji or special chars)
+  if (line.match(/^[\u{1F300}-\u{1F9FF}]/u) || line.startsWith('[') || line.startsWith('>')) {
+    return (
+      <div className="text-[var(--neon-cyan)] whitespace-pre-wrap break-all leading-relaxed">
+        {line}
+      </div>
+    );
+  }
+
+  // Code blocks (lines starting with common code indicators)
+  if (
+    line.trimStart().startsWith('def ') ||
+    line.trimStart().startsWith('function ') ||
+    line.trimStart().startsWith('class ') ||
+    line.trimStart().startsWith('const ') ||
+    line.trimStart().startsWith('let ') ||
+    line.trimStart().startsWith('import ') ||
+    line.trimStart().startsWith('from ') ||
+    line.trimStart().startsWith('export ')
+  ) {
+    return (
+      <div className="text-purple-400 whitespace-pre-wrap break-all leading-relaxed font-mono">
+        {line}
+      </div>
+    );
+  }
+
+  // File paths (containing / or \)
+  if ((line.includes('/') || line.includes('\\')) && !line.includes(' ')) {
+    return (
+      <div className="text-blue-400 whitespace-pre-wrap break-all leading-relaxed">
+        {line}
+      </div>
+    );
+  }
+
+  // Default styling
+  return (
+    <div className="text-[var(--text-secondary)] whitespace-pre-wrap break-all leading-relaxed">
+      {line}
+    </div>
   );
 }
 

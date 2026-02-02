@@ -142,10 +142,12 @@ Input.displayName = 'Input';
 
 // Search input variant
 interface SearchInputProps extends Omit<InputProps, 'icon' | 'type'> {
+  /** Called when search should be triggered (reserved for future use) */
   onSearch?: (value: string) => void;
 }
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ({ onSearch, ...props }, ref) => {
     return (
       <Input

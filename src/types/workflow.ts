@@ -7,6 +7,8 @@ export interface WorkflowNode extends Node {
     agentId?: string;
     status?: 'pending' | 'running' | 'completed' | 'failed';
     progress?: number;
+    systemPrompt?: string;
+    assignedTask?: string;
   };
 }
 

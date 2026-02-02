@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ReactFlow,
@@ -21,7 +21,11 @@ import {
   Minimize2,
   Settings,
   Keyboard,
+  X,
+  FileText,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   EnhancedAgentNode,
@@ -32,10 +36,13 @@ import {
 } from '../components/Workflow';
 import { Button } from '../components/ui';
 import { useWorkflowStore } from '../stores/workflowStore';
+import { useProjectStore } from '../stores/projectStore';
+import type { Workflow } from '../types';
 import { useWorkflowCanvas, useWorkflowExecution } from '../hooks';
 import type { AgentRole, WorkflowNode } from '../types';
 import type { EnhancedAgentNodeData } from '../components/Workflow/EnhancedAgentNode';
 import type { AgentMessage } from '../components/Workflow/MessagePanel';
+import { applyLayout, type LayoutPreset } from '../utils/layoutWorkflow';
 
 // Node and edge types for React Flow
 const nodeTypes: NodeTypes = {
@@ -46,14 +53,33 @@ const edgeTypes: EdgeTypes = {
   dataFlow: DataFlowEdge,
 };
 
-// Layout presets
-type LayoutPreset = 'dagre' | 'force' | 'timeline' | 'manual';
+// Layout presets imported from utils/layoutWorkflow
 
 // View modes
 type ViewMode = 'canvas' | 'timeline' | 'split';
 
 export function EnhancedWorkflowEditor() {
-  const { nodes, edges, addNode, clearCanvas } = useWorkflowStore();
+  const {
+    nodes,
+    edges,
+    addNode,
+    setNodes,
+    clearCanvas,
+    workflows,
+    currentWorkflow,
+    fetchWorkflows,
+    saveCurrentWorkflow,
+    loadWorkflow,
+    deleteWorkflow,
+    isLoading,
+    nodeStatuses,
+    executionStartTime,
+    messages: workflowMessages,
+    executeWorkflow,
+    cancelExecution,
+    resetExecutionState,
+  } = useWorkflowStore();
+  const { projects, selectedProjectId, fetchProjects } = useProjectStore();
   const { onNodesChange, onEdgesChange, onConnect } = useWorkflowCanvas();
   const { isExecuting } = useWorkflowExecution();
 
@@ -65,54 +91,100 @@ export function EnhancedWorkflowEditor() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
-  // Mock data for demo
+  // Save/Load dialog state
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [workflowName, setWorkflowName] = useState('');
+  const [workflowDescription, setWorkflowDescription] = useState('');
+
+  // Execution dialog state
+  const [showExecuteDialog, setShowExecuteDialog] = useState(false);
+  const [executeProjectId, setExecuteProjectId] = useState<string>('');
+  const [executePrompt, setExecutePrompt] = useState('');
+
+  // Timeline state
   const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Mock timeline data
-  const timelineAgents = useMemo(
-    () =>
-      Array.from(nodes).map((node) => ({
+  // Stable time reference for timeline calculations
+  // eslint-disable-next-line react-hooks/purity
+  const initialTimeRef = useRef(Date.now());
+
+  // Fetch workflows and projects on mount
+  useEffect(() => {
+    fetchWorkflows();
+    fetchProjects();
+  }, [fetchWorkflows, fetchProjects]);
+
+  // Convert projects Map to array for display
+  const projectList = useMemo(() => Array.from(projects.values()), [projects]);
+
+  // Convert workflows Map to array for display
+  const workflowList = useMemo(() => Array.from(workflows.values()), [workflows]);
+
+  // Timeline data from actual execution state
+  const timelineAgents = useMemo(() => {
+    const startTime = executionStartTime || initialTimeRef.current;
+    const now = initialTimeRef.current;
+    return Array.from(nodes).map((node) => {
+      const nodeStatus = nodeStatuses.get(node.id);
+      const data = node.data as EnhancedAgentNodeData;
+      const events: { type: 'start' | 'running' | 'pause' | 'resume' | 'complete' | 'fail' | 'blocked'; timestamp: number; duration?: number }[] = [];
+
+      if (nodeStatus) {
+        const relativeStart = (nodeStatus.startedAt || startTime) - startTime;
+        const duration = nodeStatus.completedAt
+          ? nodeStatus.completedAt - (nodeStatus.startedAt || startTime)
+          : nodeStatus.status === 'running'
+          ? now - (nodeStatus.startedAt || startTime)
+          : 0;
+
+        // Map status to timeline event types
+        const statusToEventType = {
+          pending: 'blocked' as const,
+          running: 'running' as const,
+          completed: 'complete' as const,
+          failed: 'fail' as const,
+          skipped: 'blocked' as const,
+        };
+
+        const eventType = statusToEventType[nodeStatus.status as keyof typeof statusToEventType] || 'blocked';
+
+        events.push({
+          type: eventType,
+          timestamp: relativeStart,
+          duration: duration > 0 ? duration : undefined,
+        });
+      } else {
+        events.push({ type: 'blocked', timestamp: 0 });
+      }
+
+      return {
         id: node.id,
-        name: (node.data as EnhancedAgentNodeData).label,
-        role: (node.data as EnhancedAgentNodeData).agentRole,
-        events: [
-          { type: 'running' as const, timestamp: Math.random() * 10000, duration: 5000 + Math.random() * 10000 },
-        ],
-      })),
-    [nodes]
-  );
+        name: data.label,
+        role: data.agentRole,
+        events,
+      };
+    });
+  }, [nodes, nodeStatuses, executionStartTime]);
 
-  // Mock messages
-  const [messages] = useState<AgentMessage[]>([
-    {
-      id: '1',
-      timestamp: Date.now() - 60000,
-      from: { id: 'orchestrator', name: 'Orchestrator', role: 'orchestrator' },
-      to: 'broadcast',
-      type: 'command',
-      content: { action: 'start', task: 'Build REST API' },
-      preview: 'Starting task: Build REST API',
-    },
-    {
-      id: '2',
-      timestamp: Date.now() - 50000,
-      from: { id: 'architect', name: 'Architect', role: 'architect' },
-      to: { id: 'implementer', name: 'Implementer', role: 'implementer' },
-      type: 'data',
-      content: { schema: { users: {}, posts: {} }, files: ['user.ts', 'post.ts'] },
-      preview: 'Schema definition with 2 models',
-    },
-    {
-      id: '3',
-      timestamp: Date.now() - 30000,
-      from: { id: 'implementer', name: 'Implementer', role: 'implementer' },
-      to: { id: 'tester', name: 'Tester', role: 'tester' },
-      type: 'result',
-      content: { filesCreated: 3, linesOfCode: 250 },
-      preview: 'Implementation complete: 3 files, 250 LOC',
-    },
-  ]);
+  // Convert workflow messages to AgentMessage format for MessagePanel
+  const messages = useMemo<AgentMessage[]>(() => {
+    return workflowMessages.map((msg) => ({
+      id: msg.id,
+      timestamp: msg.timestamp,
+      from: {
+        id: msg.fromNodeId,
+        name: msg.fromNodeName,
+        role: msg.fromNodeRole as AgentRole,
+      },
+      to: msg.toNodeId === 'broadcast'
+        ? 'broadcast'
+        : { id: msg.toNodeId, name: msg.toNodeName || msg.toNodeId, role: 'agent' as AgentRole },
+      type: msg.type,
+      content: { message: msg.content },
+      preview: msg.content,
+    }));
+  }, [workflowMessages]);
 
   const handleAddNode = useCallback(
     (role: AgentRole) => {
@@ -136,18 +208,129 @@ export function EnhancedWorkflowEditor() {
   );
 
   const handlePlay = useCallback(() => {
-    setIsPlaying(true);
-    // Simulate execution
-  }, []);
+    if (!currentWorkflow) {
+      toast.error('Save workflow first before executing');
+      return;
+    }
+    if (nodes.length === 0) {
+      toast.error('Add agents to the workflow before executing');
+      return;
+    }
+    // Pre-select project if one is selected
+    setExecuteProjectId(selectedProjectId || '');
+    setExecutePrompt('');
+    setShowExecuteDialog(true);
+  }, [currentWorkflow, nodes.length, selectedProjectId]);
+
+  const handleExecuteConfirm = useCallback(async () => {
+    if (!executeProjectId) {
+      toast.error('Please select a project');
+      return;
+    }
+    if (!executePrompt.trim()) {
+      toast.error('Please enter a task prompt');
+      return;
+    }
+    if (!currentWorkflow) {
+      toast.error('No workflow to execute');
+      return;
+    }
+
+    try {
+      setShowExecuteDialog(false);
+      await executeWorkflow(currentWorkflow.id, executeProjectId, executePrompt.trim());
+      toast.success('Workflow execution started');
+    } catch (error) {
+      toast.error(`Failed to start execution: ${error}`);
+    }
+  }, [executeProjectId, executePrompt, currentWorkflow, executeWorkflow]);
 
   const handlePause = useCallback(() => {
-    setIsPlaying(false);
+    toast.info('Workflow pause not supported - use Stop to cancel');
   }, []);
 
-  const handleStop = useCallback(() => {
-    setIsPlaying(false);
+  const handleStop = useCallback(async () => {
+    if (isExecuting) {
+      try {
+        await cancelExecution();
+        toast.success('Workflow execution cancelled');
+      } catch (error) {
+        toast.error(`Failed to cancel: ${error}`);
+      }
+    }
+    resetExecutionState();
     setCurrentTime(0);
-  }, []);
+  }, [isExecuting, cancelExecution, resetExecutionState]);
+
+  const handleSave = useCallback(() => {
+    if (nodes.length === 0) {
+      toast.error('Cannot save empty workflow');
+      return;
+    }
+    // Pre-fill with current workflow name if editing
+    if (currentWorkflow) {
+      setWorkflowName(currentWorkflow.name);
+      setWorkflowDescription(currentWorkflow.description || '');
+    } else {
+      setWorkflowName('');
+      setWorkflowDescription('');
+    }
+    setShowSaveDialog(true);
+  }, [nodes.length, currentWorkflow]);
+
+  const handleSaveConfirm = useCallback(async () => {
+    if (!workflowName.trim()) {
+      toast.error('Please enter a workflow name');
+      return;
+    }
+
+    try {
+      await saveCurrentWorkflow(workflowName.trim(), workflowDescription.trim() || undefined);
+      toast.success(`Workflow "${workflowName}" saved`);
+      setShowSaveDialog(false);
+      setWorkflowName('');
+      setWorkflowDescription('');
+    } catch (error) {
+      toast.error(`Failed to save: ${error}`);
+    }
+  }, [workflowName, workflowDescription, saveCurrentWorkflow]);
+
+  const handleLoad = useCallback(() => {
+    fetchWorkflows();
+    setShowLoadDialog(true);
+  }, [fetchWorkflows]);
+
+  const handleLoadWorkflow = useCallback(async (workflow: Workflow) => {
+    try {
+      await loadWorkflow(workflow.id);
+      toast.success(`Loaded "${workflow.name}"`);
+      setShowLoadDialog(false);
+    } catch (error) {
+      toast.error(`Failed to load: ${error}`);
+    }
+  }, [loadWorkflow]);
+
+  const handleDeleteWorkflow = useCallback(async (workflowId: string, name: string) => {
+    try {
+      await deleteWorkflow(workflowId);
+      toast.success(`Deleted "${name}"`);
+    } catch (error) {
+      toast.error(`Failed to delete: ${error}`);
+    }
+  }, [deleteWorkflow]);
+
+  const handleLayoutChange = useCallback(
+    (newLayout: LayoutPreset) => {
+      setLayoutPreset(newLayout);
+      if (newLayout === 'manual' || nodes.length === 0) {
+        return;
+      }
+      const layoutedNodes = applyLayout(newLayout, nodes, edges);
+      setNodes(layoutedNodes);
+      toast.success(`Applied ${newLayout} layout`);
+    },
+    [nodes, edges, setNodes]
+  );
 
   const defaultEdgeOptions = useMemo(
     () => ({
@@ -162,7 +345,11 @@ export function EnhancedWorkflowEditor() {
     (e: React.KeyboardEvent) => {
       if (e.key === ' ' && e.target === document.body) {
         e.preventDefault();
-        isPlaying ? handlePause() : handlePlay();
+        if (isExecuting) {
+          handleStop();
+        } else {
+          handlePlay();
+        }
       }
       if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
         handlePlay();
@@ -174,7 +361,7 @@ export function EnhancedWorkflowEditor() {
         setShowKeyboardShortcuts((prev) => !prev);
       }
     },
-    [isPlaying, handlePlay, handlePause, handleStop]
+    [isExecuting, handlePlay, handleStop]
   );
 
   return (
@@ -253,10 +440,10 @@ export function EnhancedWorkflowEditor() {
               onPlay={handlePlay}
               onPause={handlePause}
               onStop={handleStop}
-              onSave={() => console.log('Save')}
-              onLoad={() => console.log('Load')}
+              onSave={handleSave}
+              onLoad={handleLoad}
               onClear={clearCanvas}
-              isExecuting={isPlaying}
+              isExecuting={isExecuting}
             />
           </div>
 
@@ -265,7 +452,7 @@ export function EnhancedWorkflowEditor() {
             <span className="text-xs text-[var(--text-tertiary)]">Layout:</span>
             <select
               value={layoutPreset}
-              onChange={(e) => setLayoutPreset(e.target.value as LayoutPreset)}
+              onChange={(e) => handleLayoutChange(e.target.value as LayoutPreset)}
               className="text-xs bg-[var(--bg-tertiary)] text-[var(--text-primary)] border border-[var(--glass-border)] rounded-md px-2 py-1"
             >
               <option value="manual">Manual</option>
@@ -273,6 +460,15 @@ export function EnhancedWorkflowEditor() {
               <option value="force">Force-Directed</option>
               <option value="timeline">Timeline</option>
             </select>
+            {layoutPreset !== 'manual' && (
+              <button
+                onClick={() => handleLayoutChange(layoutPreset)}
+                className="text-xs px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)]/50 transition-colors"
+                title="Re-apply current layout"
+              >
+                Apply
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -328,9 +524,9 @@ export function EnhancedWorkflowEditor() {
                 agents={timelineAgents}
                 totalDuration={30000}
                 currentTime={currentTime}
-                isPlaying={isPlaying}
+                isPlaying={isExecuting}
                 onSeek={setCurrentTime}
-                onPlayPause={() => (isPlaying ? handlePause() : handlePlay())}
+                onPlayPause={() => (isExecuting ? handleStop() : handlePlay())}
                 className="h-full"
               />
             </div>
@@ -364,9 +560,9 @@ export function EnhancedWorkflowEditor() {
                   agents={timelineAgents}
                   totalDuration={30000}
                   currentTime={currentTime}
-                  isPlaying={isPlaying}
+                  isPlaying={isExecuting}
                   onSeek={setCurrentTime}
-                  onPlayPause={() => (isPlaying ? handlePause() : handlePlay())}
+                  onPlayPause={() => (isExecuting ? handleStop() : handlePlay())}
                   className="h-full"
                 />
               </div>
@@ -505,6 +701,268 @@ export function EnhancedWorkflowEditor() {
               >
                 Close
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Save Workflow Dialog */}
+      <AnimatePresence>
+        {showSaveDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowSaveDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--glass-border)] p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Save Workflow
+                </h2>
+                <button
+                  onClick={() => setShowSaveDialog(false)}
+                  className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-[var(--text-secondary)] mb-1">
+                    Workflow Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={workflowName}
+                    onChange={(e) => setWorkflowName(e.target.value)}
+                    placeholder="My Workflow"
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--glass-border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--neon-cyan)]"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-[var(--text-secondary)] mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={workflowDescription}
+                    onChange={(e) => setWorkflowDescription(e.target.value)}
+                    placeholder="Describe what this workflow does..."
+                    rows={3}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--glass-border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--neon-cyan)] resize-none"
+                  />
+                </div>
+
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  {nodes.length} agent{nodes.length !== 1 ? 's' : ''}, {edges.length} connection{edges.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => setShowSaveDialog(false)}
+                  className="flex-1 py-2 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveConfirm}
+                  disabled={!workflowName.trim() || isLoading}
+                  className="flex-1 py-2 rounded-lg bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Load Workflow Dialog */}
+      <AnimatePresence>
+        {showLoadDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowLoadDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--glass-border)] p-6 max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Load Workflow
+                </h2>
+                <button
+                  onClick={() => setShowLoadDialog(false)}
+                  className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-[200px]">
+                {workflowList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-[var(--text-tertiary)]">
+                    <FileText size={48} className="mb-3 opacity-50" />
+                    <p className="text-sm">No saved workflows</p>
+                    <p className="text-xs mt-1">Create and save a workflow to see it here</p>
+                  </div>
+                ) : (
+                  workflowList.map((workflow) => (
+                    <div
+                      key={workflow.id}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--glass-border)] hover:border-[var(--neon-cyan)]/50 transition-colors group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <button
+                          onClick={() => handleLoadWorkflow(workflow)}
+                          className="w-full text-left"
+                        >
+                          <div className="font-medium text-[var(--text-primary)] truncate">
+                            {workflow.name}
+                          </div>
+                          {workflow.description && (
+                            <div className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">
+                              {workflow.description}
+                            </div>
+                          )}
+                          <div className="text-xs text-[var(--text-tertiary)] mt-1">
+                            {workflow.graph?.nodes?.length || 0} agents &bull; Created {new Date(workflow.createdAt).toLocaleDateString()}
+                          </div>
+                        </button>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteWorkflow(workflow.id, workflow.name);
+                        }}
+                        className="p-2 rounded hover:bg-red-500/20 text-[var(--text-tertiary)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete workflow"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowLoadDialog(false)}
+                className="mt-4 w-full py-2 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Execute Workflow Dialog */}
+      <AnimatePresence>
+        {showExecuteDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowExecuteDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--glass-border)] p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Execute Workflow
+                </h2>
+                <button
+                  onClick={() => setShowExecuteDialog(false)}
+                  className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-[var(--text-secondary)] mb-1">
+                    Project *
+                  </label>
+                  <select
+                    value={executeProjectId}
+                    onChange={(e) => setExecuteProjectId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--glass-border)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--neon-cyan)]"
+                  >
+                    <option value="">Select a project...</option>
+                    {projectList.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                  {projectList.length === 0 && (
+                    <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                      No projects available. Create a project first.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm text-[var(--text-secondary)] mb-1">
+                    Task Prompt *
+                  </label>
+                  <textarea
+                    value={executePrompt}
+                    onChange={(e) => setExecutePrompt(e.target.value)}
+                    placeholder="Describe what you want the agents to do..."
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--glass-border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--neon-cyan)] resize-none"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  Workflow: <span className="text-[var(--text-secondary)]">{currentWorkflow?.name}</span>
+                  {' • '}
+                  {nodes.length} agent{nodes.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-6">
+                <button
+                  onClick={() => setShowExecuteDialog(false)}
+                  className="flex-1 py-2 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExecuteConfirm}
+                  disabled={!executeProjectId || !executePrompt.trim() || isLoading}
+                  className="flex-1 py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Starting...' : 'Run Workflow'}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -1,0 +1,319 @@
+# NEXUS Handoff Template: QA Engineer (Tester)
+# Use this template when tester completes testing
+
+handoff:
+  from_agent: tester
+  to_agent: # implementer (for bugs) | devops (if passing) | security (if security bugs)
+  timestamp: # ISO 8601 - filled by orchestrator
+  task_id: # Project/task identifier
+
+  #############################################
+  # SUMMARY - What did you test?
+  #############################################
+  summary:
+    what_was_done: |
+      # 2-3 sentences. What was tested?
+      # Example: "Completed integration testing of authentication system.
+      # Tested registration, login, and JWT validation flows."
+
+    test_scope:
+      features_tested:
+        - # User registration
+        - # User login
+        - # Token validation
+
+      test_types_performed:
+        - # Unit tests
+        - # Integration tests
+        - # Manual verification
+
+    overall_result: # passed | passed_with_issues | failed
+
+    test_coverage:
+      lines: # 85% (if measured)
+      branches: # 72% (if measured)
+      critical_paths: # 100% (manual assessment)
+
+  #############################################
+  # TEST RESULTS - Tester-specific
+  #############################################
+  test_results:
+    summary:
+      total_tests: # 24
+      passed: # 21
+      failed: # 2
+      skipped: # 1
+
+    passed_tests:
+      # Key passing tests (not all, just highlights)
+      - test: # User registration with valid data
+        type: integration
+        notes: # Works as expected
+
+      - test: # JWT validation middleware
+        type: unit
+        notes: # All token scenarios covered
+
+    failed_tests:
+      # All failed tests - these become bugs
+      - test_id: TEST-001
+        test_name: # Login with special characters in password
+        type: integration
+        expected: # Successful login
+        actual: # 500 server error
+        reproduction_steps: |
+          # 1. Register user with password "Test@123#$"
+          # 2. Attempt login with same credentials
+          # 3. Observe 500 error
+        severity: high  # critical | high | medium | low
+        is_blocker: true  # Blocks release?
+        screenshot: # Path if applicable
+        logs: |
+          # Relevant error logs
+
+      - test_id: TEST-002
+        test_name:
+        type:
+        expected:
+        actual:
+        reproduction_steps: |
+
+        severity: medium
+        is_blocker: false
+
+    skipped_tests:
+      - test: # Performance testing
+        reason: # Out of scope for this phase
+
+  #############################################
+  # BUG REPORTS - For Implementer
+  #############################################
+  bugs:
+    # This section is REQUIRED when handing off to implementer
+
+    critical:
+      # Blocks any deployment
+      - bug_id: BUG-001
+        title: # Brief title
+        severity: critical
+        test_id: # TEST-XXX that found this
+        reproduction_steps: |
+          # Exact steps to reproduce
+          # 1.
+          # 2.
+          # 3.
+        expected_behavior: |
+          # What should happen
+        actual_behavior: |
+          # What actually happens
+        environment:
+          os: # Linux
+          node_version: # 18.x
+          browser: # N/A or specific
+        evidence:
+          logs: |
+            # Relevant logs
+          screenshot: # Path if applicable
+
+        # IMPORTANT: Is this a bug or a feature request?
+        classification: bug  # bug | feature_request | works_as_designed | needs_clarification
+
+    high:
+      - bug_id: BUG-002
+        title:
+        severity: high
+        test_id:
+        reproduction_steps: |
+
+        expected_behavior: |
+
+        actual_behavior: |
+
+        classification: bug
+
+    medium:
+      - bug_id: BUG-003
+        title:
+        severity: medium
+        test_id:
+        reproduction_steps: |
+
+        expected_behavior: |
+
+        actual_behavior: |
+
+        classification: bug
+
+    low:
+      - bug_id: BUG-004
+        title:
+        severity: low
+        test_id:
+        description: |
+
+        classification: bug
+
+  #############################################
+  # NOT BUGS - Important Clarifications
+  #############################################
+  not_bugs:
+    # Things that looked like bugs but aren't
+    - observation: # No email validation
+      reason_not_bug: # Confirmed out of scope per architect handoff
+      reference: # architect_handoff.yaml line X
+
+    - observation: # No password reset
+      reason_not_bug: # Explicitly out of scope
+
+  #############################################
+  # BUG FIX SCOPE - For Implementer
+  #############################################
+  bug_fix_scope:
+    # Explicit boundaries for bug fix work
+
+    must_fix_before_release:
+      - BUG-001
+      - BUG-002
+
+    should_fix:
+      - BUG-003
+
+    can_defer:
+      - BUG-004
+
+    fix_instructions:
+      # Guidance for implementer
+      - bug_id: BUG-001
+        suggested_fix: |
+          # How tester thinks this should be fixed (guidance, not mandate)
+        verify_by: |
+          # How to verify the fix works
+        do_not: |
+          # What NOT to do while fixing
+          # - Don't refactor the whole file
+          # - Don't add new features
+
+    out_of_scope_for_fixes:
+      - # Do not refactor code not related to bugs
+      - # Do not add features
+      - # Do not "improve" things that work
+
+  #############################################
+  # CONTEXT FOR NEXT AGENT
+  #############################################
+  context_for_next_agent:
+    must_know:
+      - # Test environment configuration
+      - # Known test data in system
+      - #
+
+    original_intent: |
+      # Restate - testing should validate original intent was met
+
+    test_environment:
+      setup: |
+        # How to set up test environment
+      test_data: |
+        # What test data exists
+      cleanup: |
+        # How to reset for fresh tests
+
+  #############################################
+  # STATUS
+  #############################################
+  status:
+    completion: complete  # complete | partial | blocked
+
+    qa_approval: # approved | conditional | rejected
+
+    if_conditional:
+      conditions:
+        - # Fix BUG-001 and BUG-002
+      re_test_scope:
+        - # Only re-test fixed functionality
+
+    if_rejected:
+      reason: |
+        # Why rejected
+      blocker_bugs:
+        - # BUG-001
+
+    if_blocked:
+      blocker: |
+        # What's blocking testing?
+      needs_from: # implementer | devops | human
+
+  #############################################
+  # NEXT STEPS
+  #############################################
+  next_steps:
+    for_implementer:
+      # If bugs found
+      - # Fix BUG-001 (critical)
+      - # Fix BUG-002 (high)
+      - # Hand back to tester for verification
+
+    for_devops:
+      # If approved
+      - # Ready for staging deployment
+      - # Ensure [config] is set
+
+    for_security:
+      # If security-related bugs found
+      - # Review BUG-XXX for security implications
+
+    re_test_scope:
+      # What tester will re-test after fixes
+      - # Only the fixed functionality
+      - # Specific tests: TEST-001, TEST-002
+      - # NOT full regression
+
+    warnings:
+      - # Test data in database - don't deploy to prod
+      - #
+
+  #############################################
+  # VERIFICATION
+  #############################################
+  verification:
+    how_fixes_will_be_verified: |
+      # How tester will verify bug fixes
+
+    regression_test_plan: |
+      # What regression tests will run
+
+    acceptance_test_results:
+      # Final acceptance criteria status
+      - criterion: # User can register
+        status: passed
+      - criterion: # User can login
+        status: failed  # Due to BUG-001
+      - criterion: # Invalid tokens rejected
+        status: passed
+
+  #############################################
+  # OPTIONAL SECTIONS
+  #############################################
+  test_improvements:
+    # Suggestions for better testing in future
+    - # Add automated tests for edge cases
+    - # Need test data generator
+
+  test_debt:
+    - item: # No load testing
+      priority: medium
+      add_before: # Production launch
+
+  flaky_tests:
+    # Tests that sometimes fail
+    - test: # TEST-015
+      flakiness: # Fails ~10% of runs
+      suspected_cause: # Timing issue
+      workaround: # Retry
+
+  questions_for_human:
+    - # Question needing Zach's input
+
+  test_artifacts:
+    - # /test-results/report.html
+    - # /test-results/coverage/

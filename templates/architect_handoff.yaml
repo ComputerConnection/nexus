@@ -1,0 +1,213 @@
+# NEXUS Handoff Template: System Architect
+# Use this template when architect completes design work
+
+handoff:
+  from_agent: architect
+  to_agent: implementer  # Usually goes to implementer
+  timestamp: # ISO 8601 - filled by orchestrator
+  task_id: # Project/task identifier
+
+  #############################################
+  # SUMMARY - What did you design?
+  #############################################
+  summary:
+    what_was_done: |
+      # 2-3 sentences. What was designed/architected?
+      # Example: "Designed the authentication system for local AI server.
+      # Defined API contracts, data models, and component boundaries."
+
+    decisions_made:
+      # List EVERY architectural decision with reasoning
+      # This is critical - implementer needs to know WHY
+
+      - decision: # What was decided
+        rationale: # Why this approach
+        alternatives_rejected:
+          - # Option not taken and why
+          - # Option not taken and why
+
+      - decision:
+        rationale:
+        alternatives_rejected:
+          -
+
+    current_state:
+      files_created:
+        - # /docs/architecture.md
+        - # /docs/api-contracts/endpoints.yaml
+        - # /diagrams/component-diagram.png
+      diagrams:
+        - # List any diagrams created
+      specs_written:
+        - # API specs, data models, etc.
+
+  #############################################
+  # ARCHITECTURE DETAILS - Architect-specific
+  #############################################
+  architecture:
+    overview: |
+      # High-level description of the architecture
+      # What are the main components and how do they interact?
+
+    components:
+      - name: # Component name
+        purpose: # What it does
+        technology: # Tech stack for this component
+        interfaces: # How other components interact with it
+
+      - name:
+        purpose:
+        technology:
+        interfaces:
+
+    data_flow: |
+      # How does data move through the system?
+      # Input → Processing → Output
+
+    api_contracts:
+      # Key endpoints/interfaces defined
+      - endpoint: # /api/endpoint
+        method: # GET/POST/etc
+        purpose: # What it does
+        request_shape: # Brief description or reference to spec file
+        response_shape: # Brief description or reference to spec file
+
+    data_models:
+      # Key data structures
+      - model: # Model name
+        purpose: # What it represents
+        key_fields:
+          - # field: type - description
+
+    non_functional_requirements:
+      performance:
+        - # Expected load, response times, etc.
+      security:
+        - # Security requirements baked into architecture
+      scalability:
+        - # How this scales (or doesn't need to)
+      offline_capability:
+        - # Can it work offline? Requirements?
+
+  #############################################
+  # CONTEXT FOR IMPLEMENTER
+  #############################################
+  context_for_next_agent:
+    must_know:
+      # Critical facts implementer MUST understand
+      # If they miss these, they WILL build the wrong thing
+      - # Constraint or requirement
+      - # Constraint or requirement
+      - # Constraint or requirement
+
+    original_intent: |
+      # Copy from ORIGINAL_BRIEF.md or restate clearly
+      # This is the anchor - what are we actually trying to build and WHY?
+
+    scope_boundaries:
+      in_scope:
+        - # What implementer SHOULD build
+        - #
+      out_of_scope:
+        - # What implementer should NOT build (even if tempting)
+        - # Features for later phases
+        - #
+
+    assumptions:
+      # What assumptions is this architecture based on?
+      - # Assumption about users, scale, environment, etc.
+      - #
+
+  #############################################
+  # STATUS
+  #############################################
+  status:
+    completion: complete  # complete | partial | blocked
+
+    # If partial, fill this:
+    if_partial:
+      remaining_design_work:
+        - # What still needs to be designed
+      why_stopping: |
+        # Why hand off now?
+
+    # If blocked, fill this:
+    if_blocked:
+      blocker: |
+        # What's blocking?
+      needs_from: # human | other agent
+      unblock_criteria: |
+        # What needs to happen?
+
+  #############################################
+  # NEXT STEPS FOR IMPLEMENTER
+  #############################################
+  next_steps:
+    implementation_order:
+      # Suggested order to build things
+      - priority: 1
+        task: # First thing to implement
+        notes: # Any notes for this task
+      - priority: 2
+        task:
+        notes:
+      - priority: 3
+        task:
+        notes:
+
+    suggested_approach: |
+      # How would you approach this if you were implementing?
+      # This is guidance, not mandate - implementer can deviate with reason
+
+    warnings:
+      # Traps, gotchas, things that look right but aren't
+      - # Warning
+      - # Warning
+
+    do_not:
+      # Explicit things implementer should NOT do
+      - # Don't add X
+      - # Don't optimize for Y yet
+      - # Don't integrate with Z
+
+  #############################################
+  # VERIFICATION
+  #############################################
+  verification:
+    how_to_verify_implementation: |
+      # How will we know the implementation matches the architecture?
+      # What should be true when implementer is done?
+
+    acceptance_criteria:
+      - # Criterion 1
+      - # Criterion 2
+      - # Criterion 3
+
+    test_scenarios:
+      - scenario: # Description
+        expected: # What should happen
+
+  #############################################
+  # OPTIONAL SECTIONS
+  #############################################
+  technical_debt:
+    # Known shortcuts or deferred decisions
+    - item: # What was deferred
+      reason: # Why
+      severity: low  # low | medium | high
+      revisit_when: # When should this be addressed
+
+  questions_for_human:
+    # Questions that need Zach's input
+    - # Question
+
+  references:
+    - # Link to design doc
+    - # Link to similar system
+    - # External documentation
+
+  future_phases:
+    # What's planned for later (so implementer knows not to build it now)
+    - phase: # Phase name
+      features:
+        - # Feature deferred to this phase

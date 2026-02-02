@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: Store AI POC API
+  description: |
+    Local AI server for Computer Connection.
+    Provides chat interface, document RAG, and data queries.
+    Runs entirely on-premises with no external dependencies.
+  version: 1.0.0
+  contact:
+    name: Zach
+    email: zach@computerconnection.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Chat
+    description: AI chat endpoints
+  - name: Documents
+    description: SOP document management
+  - name: Data
+    description: Business data import and queries
+  - name: System
+    description: Health and status endpoints
+
+paths:
+  /:
+    get:
+      summary: Serve web frontend
+      description: Returns the main chat interface HTML
+      tags:
+        - System
+      responses:
+        '200':
+          description: HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /api/chat:
+    post:
+      summary: Send chat message
+      description: |
+        Main chat endpoint. Classifies the query, retrieves relevant context
+        (documents or data), and generates an AI response.
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              sop_query:
+                summary: SOP question
+                value:
+                  message: "How do we handle a customer return?"
+                  session_id: "session_abc123"
+              data_query:
+                summary: Data question
+                value:
+                  message: "What were sales last Tuesday?"
+                  session_id: "session_abc123"
+              general:
+                summary: General question
+                value:
+                  message: "Hello, are you working?"
+                  session_id: "session_abc123"
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                sop_response:
+                  summary: SOP answer
+                  value:
+                    response: "To handle a customer return, follow these steps: 1. Verify the purchase..."
+                    sources:
+                      - "return-policy.pdf"
+                    query_type: "sop"
+                    session_id: "session_abc123"
+        '500':
+          description: Server error (e.g., Ollama unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/documents:
+    get:
+      summary: List uploaded documents
+      description: Returns all documents that have been uploaded for RAG
+      tags:
+        - Documents
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+              example:
+                documents:
+                  - id: "doc_abc123"
+                    filename: "return-policy.pdf"
+                    chunk_count: 8
+                    uploaded_at: "2026-01-25T10:30:00Z"
+                  - id: "doc_def456"
+                    filename: "employee-handbook.md"
+                    chunk_count: 24
+                    uploaded_at: "2026-01-24T14:15:00Z"
+
+  /api/documents/upload:
+    post:
+      summary: Upload document for RAG
+      description: |
+        Upload a PDF or Markdown document. The document will be:
+        1. Extracted to text
+        2. Chunked into segments
+        3. Embedded and stored in vector database
+
+        Supported formats: PDF, MD, TXT
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Document file (PDF, MD, or TXT)
+      responses:
+        '201':
+          description: Document uploaded and processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentUploadResponse'
+              example:
+                document_id: "doc_abc123"
+                filename: "return-policy.pdf"
+                chunks: 8
+                message: "Document processed successfully"
+        '400':
+          description: Invalid file type or processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/documents/{document_id}:
+    delete:
+      summary: Delete document
+      description: Remove a document and its embeddings from the system
+      tags:
+        - Documents
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Document ID to delete
+      responses:
+        '200':
+          description: Document deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Document deleted"
+        '404':
+          description: Document not found
+
+  /api/data/import:
+    post:
+      summary: Import CSV data
+      description: |
+        Import business data from CSV file. Currently supports:
+        - sales: Sales transaction data
+
+        CSV must have headers matching expected schema.
+      tags:
+        - Data
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - data_type
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file to import
+                data_type:
+                  type: string
+                  enum:
+                    - sales
+                  description: Type of data being imported
+      responses:
+        '201':
+          description: Data imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataImportResponse'
+              example:
+                rows_imported: 150
+                data_type: "sales"
+                message: "Successfully imported 150 sales records"
+        '400':
+          description: Invalid CSV or data type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/data/sales:
+    get:
+      summary: Get sales data
+      description: Retrieve imported sales data with optional filters
+      tags:
+        - Data
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter sales from this date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter sales until this date
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: Sales data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesDataResponse'
+
+  /api/health:
+    get:
+      summary: Health check
+      description: |
+        Returns health status of all system components:
+        - API server
+        - Ollama LLM service
+        - Database connection
+        - ChromaDB vector store
+      tags:
+        - System
+      responses:
+        '200':
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                components:
+                  api: "ok"
+                  ollama: "ok"
+                  database: "ok"
+                  chromadb: "ok"
+                model: "llama3.1:8b"
+                uptime_seconds: 3600
+        '503':
+          description: System unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "unhealthy"
+                components:
+                  api: "ok"
+                  ollama: "error"
+                  database: "ok"
+                  chromadb: "ok"
+                error: "Ollama service not responding"
+
+  /api/audit:
+    get:
+      summary: Get audit log
+      description: Retrieve query audit log (for admin/debugging)
+      tags:
+        - System
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Maximum records to return
+        - name: session_id
+          in: query
+          schema:
+            type: string
+          description: Filter by session ID
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogResponse'
+
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: User's message/question
+          example: "How do we handle a customer return?"
+        session_id:
+          type: string
+          description: Session ID for conversation tracking
+          example: "session_abc123"
+
+    ChatResponse:
+      type: object
+      properties:
+        response:
+          type: string
+          description: AI-generated response
+        sources:
+          type: array
+          items:
+            type: string
+          description: Documents used for context (if RAG query)
+        query_type:
+          type: string
+          enum:
+            - sop
+            - data
+            - general
+          description: How the query was classified
+        session_id:
+          type: string
+          description: Session ID
+
+    DocumentList:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique document ID
+        filename:
+          type: string
+          description: Original filename
+        chunk_count:
+          type: integer
+          description: Number of chunks in vector store
+        uploaded_at:
+          type: string
+          format: date-time
+          description: Upload timestamp
+
+    DocumentUploadResponse:
+      type: object
+      properties:
+        document_id:
+          type: string
+        filename:
+          type: string
+        chunks:
+          type: integer
+        message:
+          type: string
+
+    DataImportResponse:
+      type: object
+      properties:
+        rows_imported:
+          type: integer
+        data_type:
+          type: string
+        message:
+          type: string
+
+    SalesDataResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              date:
+                type: string
+                format: date
+              amount:
+                type: number
+              description:
+                type: string
+              category:
+                type: string
+        total:
+          type: number
+          description: Sum of amounts in result set
+        count:
+          type: integer
+          description: Number of records
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - unhealthy
+        components:
+          type: object
+          properties:
+            api:
+              type: string
+            ollama:
+              type: string
+            database:
+              type: string
+            chromadb:
+              type: string
+        model:
+          type: string
+          description: Active LLM model name
+        uptime_seconds:
+          type: integer
+        error:
+          type: string
+          description: Error message if unhealthy
+
+    AuditLogResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              session_id:
+                type: string
+              query:
+                type: string
+              query_type:
+                type: string
+              response_preview:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        detail:
+          type: string
+          description: Detailed error information

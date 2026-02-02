@@ -13,7 +13,10 @@ export interface Project {
 export interface CreateProjectRequest {
   name: string;
   description?: string;
-  working_directory: string;
+  /** Optional custom working directory. If not provided, a directory will be created automatically. */
+  working_directory?: string;
+  /** Whether to initialize the project structure (README, .gitignore, etc.). Defaults to true. */
+  init_structure?: boolean;
 }
 
 export interface UpdateProjectRequest {

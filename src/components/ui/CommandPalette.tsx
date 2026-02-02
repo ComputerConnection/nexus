@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Command } from 'cmdk';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +6,6 @@ import {
   Settings,
   Search,
   Plus,
-  Play,
   Pause,
   Trash2,
   Home,
@@ -15,6 +14,10 @@ import {
   Command as CommandIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAgentStore } from '../../stores/agentStore';
+import { useWorkflowStore } from '../../stores/workflowStore';
+import * as tauri from '../../services/tauri';
 
 interface CommandItem {
   id: string;
@@ -33,6 +36,67 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const { agents, killAgent } = useAgentStore();
+  const { clearCanvas } = useWorkflowStore();
+
+  // Action handlers
+  const handleSpawnAgent = useCallback(() => {
+    navigate('/agents');
+    toast.info('Use the "Spawn Agent" button to create a new agent');
+  }, [navigate]);
+
+  const handleNewProject = useCallback(() => {
+    navigate('/projects');
+    toast.info('Use the "New Project" button to create a project');
+  }, [navigate]);
+
+  const handleNewWorkflow = useCallback(() => {
+    clearCanvas();
+    navigate('/workflows');
+    toast.success('Canvas cleared for new workflow');
+  }, [navigate, clearCanvas]);
+
+  const handlePauseAll = useCallback(async () => {
+    const runningAgents = Array.from(agents.values()).filter(
+      (a) => a.status === 'running'
+    );
+    if (runningAgents.length === 0) {
+      toast.info('No running agents to pause');
+      return;
+    }
+    let paused = 0;
+    for (const agent of runningAgents) {
+      try {
+        await tauri.pauseAgent(agent.id);
+        paused++;
+      } catch (e) {
+        console.error(`Failed to pause ${agent.name}:`, e);
+      }
+    }
+    toast.success(`Paused ${paused} agent${paused !== 1 ? 's' : ''}`);
+  }, [agents]);
+
+  const handleKillAll = useCallback(async () => {
+    const activeAgents = Array.from(agents.values()).filter(
+      (a) => a.status !== 'completed' && a.status !== 'failed' && a.status !== 'killed'
+    );
+    if (activeAgents.length === 0) {
+      toast.info('No active agents to kill');
+      return;
+    }
+    for (const agent of activeAgents) {
+      try {
+        await killAgent(agent.id);
+      } catch (e) {
+        console.error(`Failed to kill ${agent.name}:`, e);
+      }
+    }
+    toast.success(`Killed ${activeAgents.length} agent${activeAgents.length !== 1 ? 's' : ''}`);
+  }, [agents, killAgent]);
+
+  const handleSettings = useCallback(() => {
+    navigate('/settings');
+  }, [navigate]);
 
   const commands: CommandItem[] = useMemo(
     () => [
@@ -82,7 +146,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         label: 'Spawn New Agent',
         icon: <Plus size={16} />,
         shortcut: ['N', 'A'],
-        action: () => console.log('Spawn agent'),
+        action: handleSpawnAgent,
         group: 'Actions',
       },
       {
@@ -90,7 +154,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         label: 'Create New Project',
         icon: <Plus size={16} />,
         shortcut: ['N', 'P'],
-        action: () => console.log('New project'),
+        action: handleNewProject,
         group: 'Actions',
       },
       {
@@ -98,29 +162,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         label: 'Create New Workflow',
         icon: <Plus size={16} />,
         shortcut: ['N', 'W'],
-        action: () => console.log('New workflow'),
+        action: handleNewWorkflow,
         group: 'Actions',
       },
       // Agent controls
       {
-        id: 'agent-start-all',
-        label: 'Start All Agents',
-        icon: <Play size={16} />,
-        action: () => console.log('Start all'),
-        group: 'Agent Controls',
-      },
-      {
         id: 'agent-pause-all',
         label: 'Pause All Agents',
         icon: <Pause size={16} />,
-        action: () => console.log('Pause all'),
+        action: handlePauseAll,
         group: 'Agent Controls',
       },
       {
         id: 'agent-kill-all',
         label: 'Kill All Agents',
         icon: <Trash2 size={16} />,
-        action: () => console.log('Kill all'),
+        action: handleKillAll,
         group: 'Agent Controls',
       },
       // Settings
@@ -129,11 +186,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         label: 'Open Settings',
         icon: <Settings size={16} />,
         shortcut: ['⌘', ','],
-        action: () => console.log('Settings'),
+        action: handleSettings,
         group: 'Settings',
       },
     ],
-    [navigate]
+    [navigate, handleSpawnAgent, handleNewProject, handleNewWorkflow, handlePauseAll, handleKillAll, handleSettings]
   );
 
   // Handle keyboard shortcut to open palette
@@ -277,21 +334,3 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   );
 }
 
-// Hook to manage command palette state
-export function useCommandPalette() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  return { open, setOpen };
-}

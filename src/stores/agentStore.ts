@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Agent, AgentStatus } from '../types';
 import * as tauri from '../services/tauri';
+import { logAgentSpawned, logAgentKilled, logAgentCompleted, logAgentFailed } from './activityStore';
 
 interface AgentState {
   agents: Map<string, Agent>;
@@ -64,6 +65,7 @@ export const useAgentStore = create<AgentState>((set) => ({
         newOutputs.set(agent.id, []);
         return { agents: newAgents, outputs: newOutputs, isLoading: false };
       });
+      logAgentSpawned(agent.name, config.role);
       return agent;
     } catch (error) {
       set({ error: String(error), isLoading: false });
@@ -73,6 +75,8 @@ export const useAgentStore = create<AgentState>((set) => ({
 
   killAgent: async (agentId) => {
     try {
+      const state = useAgentStore.getState();
+      const agent = state.agents.get(agentId);
       await tauri.killAgent(agentId);
       set((state) => {
         const newAgents = new Map(state.agents);
@@ -82,6 +86,9 @@ export const useAgentStore = create<AgentState>((set) => ({
           selectedAgentId: state.selectedAgentId === agentId ? null : state.selectedAgentId,
         };
       });
+      if (agent) {
+        logAgentKilled(agent.name);
+      }
     } catch (error) {
       set({ error: String(error) });
     }
@@ -114,6 +121,15 @@ export const useAgentStore = create<AgentState>((set) => ({
     set((state) => {
       const agent = state.agents.get(agentId);
       if (!agent) return state;
+
+      // Log activity for completion/failure
+      const statusLower = String(status).toLowerCase();
+      if (statusLower === 'completed') {
+        logAgentCompleted(agent.name);
+      } else if (statusLower === 'failed') {
+        logAgentFailed(agent.name);
+      }
+
       const newAgents = new Map(state.agents);
       newAgents.set(agentId, { ...agent, status });
       return { agents: newAgents };

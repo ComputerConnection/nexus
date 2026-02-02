@@ -1,0 +1,360 @@
+# NEXUS Handoff Template: DevOps Engineer
+# Use this template when devops completes deployment/infrastructure work
+
+handoff:
+  from_agent: devops
+  to_agent: # tester (for verification) | implementer (if issues) | human (for sign-off)
+  timestamp: # ISO 8601 - filled by orchestrator
+  task_id: # Project/task identifier
+
+  #############################################
+  # SUMMARY - What did you deploy/configure?
+  #############################################
+  summary:
+    what_was_done: |
+      # 2-3 sentences. What was deployed or configured?
+      # Example: "Deployed authentication service to staging environment.
+      # Configured environment variables, set up database, verified health checks."
+
+    deployment_type: # initial | update | rollback | config_change | infrastructure
+
+    environment: # development | staging | production
+
+    deployment_status: # success | partial | failed | rolled_back
+
+  #############################################
+  # DEPLOYMENT DETAILS - DevOps-specific
+  #############################################
+  deployment:
+    target:
+      environment: # staging
+      server: # server name or "local"
+      url: # https://staging.example.com (if applicable)
+
+    version:
+      deployed_version: # v1.0.0 or commit hash
+      previous_version: # v0.9.0 or commit hash
+      changelog_summary: |
+        # What's new in this version
+
+    components_deployed:
+      - component: # auth-service
+        version: # 1.0.0
+        status: running
+        health_check: passing
+
+      - component: # database
+        version: # SQLite 3.x
+        status: running
+        health_check: passing
+
+    deployment_method:
+      tool: # docker | manual | ansible | etc
+      commands_run:
+        - # docker-compose up -d
+        - # npm run db:migrate
+      duration: # 5 minutes
+
+  #############################################
+  # CONFIGURATION - What was configured
+  #############################################
+  configuration:
+    environment_variables:
+      # Variables set (NOT the values - just that they're set)
+      - name: JWT_SECRET
+        set: true
+        source: # .env file | secrets manager | etc
+
+      - name: DATABASE_PATH
+        set: true
+        source: # .env file
+
+    secrets:
+      # Secrets configured (NOT the values)
+      - name: # JWT_SECRET
+        location: # Where it's stored
+        rotation_policy: # Manual | 90 days | etc
+
+    config_files:
+      - file: # /etc/app/config.yaml
+        changes: |
+          # What was changed
+
+    infrastructure:
+      # Infrastructure changes
+      - change: # Created database directory
+        location: # /var/data/app
+
+      - change: # Set up log rotation
+        config: # /etc/logrotate.d/app
+
+  #############################################
+  # NETWORKING - If applicable
+  #############################################
+  networking:
+    ports:
+      - port: 3000
+        service: # auth-service
+        exposed: true  # Accessible externally?
+        firewall: # open | restricted to X
+
+    dns:
+      - record: # staging.example.com
+        type: # A | CNAME
+        target: # IP or hostname
+
+    ssl:
+      configured: true
+      certificate: # Let's Encrypt | self-signed | none
+      expiry: # 2026-04-25
+
+    load_balancer:
+      configured: false
+      notes: # N/A for single server
+
+  #############################################
+  # DATABASE - If applicable
+  #############################################
+  database:
+    type: # SQLite | PostgreSQL | etc
+    location: # /var/data/app/database.sqlite
+
+    migrations:
+      run: true
+      version: # Migration version
+      status: success
+
+    backup:
+      configured: true
+      schedule: # Daily at 2am
+      location: # /var/backups/app
+      retention: # 7 days
+
+    seed_data:
+      applied: false
+      notes: # No seed data needed
+
+  #############################################
+  # MONITORING & LOGGING
+  #############################################
+  monitoring:
+    health_checks:
+      - endpoint: # /health
+        expected: # 200 OK
+        current: # 200 OK
+        interval: # 30 seconds
+
+    logging:
+      location: # /var/log/app
+      format: # JSON
+      retention: # 30 days
+      shipped_to: # None | Elasticsearch | etc
+
+    alerts:
+      configured: false
+      notes: # TODO for production
+
+    metrics:
+      configured: false
+      notes: # TODO for production
+
+  #############################################
+  # VERIFICATION - What was verified
+  #############################################
+  deployment_verification:
+    checks_performed:
+      - check: # Service starts
+        result: passed
+        evidence: # Process running, logs clean
+
+      - check: # Health endpoint responds
+        result: passed
+        evidence: # curl http://localhost:3000/health → 200
+
+      - check: # Can register user
+        result: passed
+        evidence: # Tested via curl
+
+      - check: # Can login
+        result: passed
+        evidence: # Received valid JWT
+
+    smoke_test_results: |
+      # Summary of smoke tests
+      # All basic functionality verified working
+
+    known_issues:
+      - issue: # Slow startup (30 seconds)
+        severity: low
+        workaround: # Expected on first run, normal after
+
+  #############################################
+  # ROLLBACK PLAN
+  #############################################
+  rollback:
+    plan: |
+      # How to rollback if needed
+      # 1. Stop current containers: docker-compose down
+      # 2. Checkout previous version: git checkout v0.9.0
+      # 3. Restart: docker-compose up -d
+      # 4. Verify health checks
+
+    rollback_tested: true  # Has rollback been tested?
+
+    rollback_time: # ~5 minutes
+
+    data_considerations: |
+      # What happens to data on rollback?
+      # Database migrations are backwards compatible
+
+  #############################################
+  # ACCESS & CREDENTIALS
+  #############################################
+  access:
+    # Who/what has access
+    ssh:
+      users:
+        - # zach (sudo)
+      key_location: # ~/.ssh/authorized_keys
+
+    application:
+      admin_user_created: false
+      notes: # First user to register is admin
+
+    service_accounts:
+      - name: # app-service
+        purpose: # Runs the application
+        permissions: # Limited to app directory
+
+  #############################################
+  # CONTEXT FOR NEXT AGENT
+  #############################################
+  context_for_next_agent:
+    must_know:
+      - # Service is running on port 3000
+      - # Database is at /var/data/app/database.sqlite
+      - # Logs are at /var/log/app
+
+    original_intent: |
+      # Restate - deployment should enable the original intent
+
+    environment_details:
+      url: # http://localhost:3000 or staging URL
+      credentials: # How to get test credentials
+      limitations: # Staging has limited resources
+
+  #############################################
+  # STATUS
+  #############################################
+  status:
+    completion: complete  # complete | partial | blocked
+
+    deployment_status: success  # success | partial | failed | rolled_back
+
+    if_partial:
+      completed:
+        - # What was completed
+      remaining:
+        - # What still needs to be done
+      why_stopping: |
+        # Why hand off now?
+
+    if_failed:
+      failure_reason: |
+        # What went wrong
+      attempted_recovery: |
+        # What was tried
+      current_state: |
+        # Where things stand now
+
+    if_blocked:
+      blocker: |
+        # What's blocking?
+      needs_from: # implementer | human | external
+
+  #############################################
+  # NEXT STEPS
+  #############################################
+  next_steps:
+    for_tester:
+      # If deployment succeeded
+      - # Verify in staging environment
+      - # Test at URL: [url]
+      - # Use these test credentials: [how to get them]
+
+    for_implementer:
+      # If issues found
+      - # Fix [issue]
+      - # Rebuild and notify devops
+
+    for_human:
+      # Sign-offs or decisions needed
+      - # Approve for production deployment
+      - # Set up production secrets
+
+    before_production:
+      # Checklist before prod deployment
+      - # Set up monitoring/alerts
+      - # Configure production secrets
+      - # Load testing
+      - # Security review of infrastructure
+
+    warnings:
+      - # This is staging - do not use for real data
+      - # SSL is self-signed - browsers will warn
+
+  #############################################
+  # OPERATIONAL RUNBOOK
+  #############################################
+  runbook:
+    start:
+      command: # docker-compose up -d
+      notes: # Wait 30 seconds for full startup
+
+    stop:
+      command: # docker-compose down
+      notes: # Graceful shutdown
+
+    restart:
+      command: # docker-compose restart
+      notes: #
+
+    logs:
+      command: # docker-compose logs -f
+      location: # Also at /var/log/app
+
+    status:
+      command: # docker-compose ps
+      health: # curl http://localhost:3000/health
+
+    common_issues:
+      - issue: # Service won't start
+        diagnosis: # Check logs for errors
+        solution: # Usually missing env vars
+
+      - issue: # Database locked
+        diagnosis: # Multiple processes accessing SQLite
+        solution: # Restart service
+
+  #############################################
+  # OPTIONAL SECTIONS
+  #############################################
+  infrastructure_debt:
+    - item: # No auto-scaling
+      priority: low
+      needed_for: # High traffic scenarios
+
+    - item: # Single server - no redundancy
+      priority: medium
+      needed_for: # Production reliability
+
+  cost:
+    current: # $0 (local) | $X/month
+    projected: # Expected cost at scale
+
+  questions_for_human:
+    - # Question needing Zach's input
+
+  documentation_created:
+    - # /docs/deployment.md
+    - # /docs/runbook.md

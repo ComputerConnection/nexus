@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Project, CreateProjectRequest, UpdateProjectRequest } from '../types';
 import * as tauri from '../services/tauri';
+import { logProjectCreated, logProjectDeleted } from './activityStore';
 
 interface ProjectState {
   projects: Map<string, Project>;
@@ -43,6 +44,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
         newProjects.set(project.id, project);
         return { projects: newProjects, isLoading: false };
       });
+      logProjectCreated(project.name);
       return project;
     } catch (error) {
       set({ error: String(error), isLoading: false });
@@ -67,6 +69,8 @@ export const useProjectStore = create<ProjectState>((set) => ({
 
   deleteProject: async (projectId) => {
     try {
+      const state = useProjectStore.getState();
+      const project = state.projects.get(projectId);
       await tauri.deleteProject(projectId);
       set((state) => {
         const newProjects = new Map(state.projects);
@@ -76,6 +80,9 @@ export const useProjectStore = create<ProjectState>((set) => ({
           selectedProjectId: state.selectedProjectId === projectId ? null : state.selectedProjectId,
         };
       });
+      if (project) {
+        logProjectDeleted(project.name);
+      }
     } catch (error) {
       set({ error: String(error) });
     }

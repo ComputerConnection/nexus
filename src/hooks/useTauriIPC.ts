@@ -33,6 +33,7 @@ export function useTauriIPC<T, P = void>(
         setIsLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [command, options.onSuccess, options.onError]
   );
 

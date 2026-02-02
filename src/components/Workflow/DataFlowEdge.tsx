@@ -57,12 +57,14 @@ function DataFlowEdgeComponent({
   const particleCount = useMemo(() => {
     if (status !== 'active') return 0;
     return Math.min(Math.max(Math.ceil(throughput / 2), 1), 5);
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [throughput, status]);
 
   // Particle animation duration based on throughput (faster = more throughput)
   const particleDuration = useMemo(() => {
     if (throughput <= 0) return 3;
     return Math.max(0.5, 3 - throughput * 0.2);
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [throughput]);
 
   const edgeColor = statusColors[status];

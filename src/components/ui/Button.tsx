@@ -66,7 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         setTimeout(() => ripple.remove(), 600);
       }
 
-      props.onClick?.(e as any);
+      props.onClick?.(e);
     };
 
     return (
