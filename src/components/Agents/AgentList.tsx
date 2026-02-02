@@ -1,26 +1,30 @@
 import { useMemo } from 'react';
 import { clsx } from 'clsx';
+import { Bot } from 'lucide-react';
 import { useAgentStore } from '../../stores/agentStore';
 import { AgentCard } from './AgentCard';
+import { CompactEmptyState } from '../EmptyState';
 
 interface AgentListProps {
   className?: string;
   onAgentSelect?: (agentId: string) => void;
   onAgentExpand?: (agentId: string) => void;
+  onSpawnAgent?: () => void;
 }
 
-export function AgentList({ className, onAgentSelect, onAgentExpand }: AgentListProps) {
+export function AgentList({ className, onAgentSelect, onAgentExpand, onSpawnAgent }: AgentListProps) {
   const { agents, selectedAgentId, selectAgent, killAgent } = useAgentStore();
 
   const agentList = useMemo(() => Array.from(agents.values()), [agents]);
 
   if (agentList.length === 0) {
     return (
-      <div className={clsx('flex items-center justify-center h-64', className)}>
-        <div className="text-center text-text-secondary">
-          <p className="text-lg font-mono">No agents active</p>
-          <p className="text-sm mt-2">Spawn agents from the Command Center</p>
-        </div>
+      <div className={clsx('h-64', className)}>
+        <CompactEmptyState
+          icon={Bot}
+          message="No agents active. Spawn agents from the Command Center."
+          action={onSpawnAgent ? { label: 'Spawn Agent', onClick: onSpawnAgent } : undefined}
+        />
       </div>
     );
   }
