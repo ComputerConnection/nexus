@@ -20,6 +20,9 @@ export { Badge, StatusBadge } from './Badge';
 // Progress
 export { ProgressBar, CircularProgress } from './Progress';
 
+// Spinner
+export { Spinner } from './Spinner';
+
 // Skeleton
 export {
   Skeleton,

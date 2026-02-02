@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Component, type ReactNode } from 'react';
+import { Component, type ReactNode, useMemo } from 'react';
 import {
   Home,
   Bot,
@@ -58,10 +58,13 @@ import { EnhancedWorkflowEditor } from './pages/EnhancedWorkflowEditor';
 import { ProjectHub } from './pages/ProjectHub';
 import { Settings as SettingsPage } from './pages/Settings';
 import { RecipesPanel } from './components/RecipesPanel';
+import { QuickActionsToolbar } from './components/QuickActionsToolbar';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { useCommandPalette } from './hooks/useCommandPalette';
+import { useQuickActionsShortcuts } from './hooks/useQuickActionsShortcuts';
 import { ToastProvider } from './components/ui/Toast';
 import { Tooltip } from './components/ui/Tooltip';
+import { useProjectStore } from './stores/projectStore';
 import { clsx } from 'clsx';
 
 const navItems = [
@@ -184,12 +187,36 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { open, setOpen } = useCommandPalette();
+  const { projects, selectedProjectId } = useProjectStore();
+
+  // Enable keyboard shortcuts for quick actions (U, T, B, L, A)
+  useQuickActionsShortcuts();
+
+  // Derive selected project info
+  const selectedProject = selectedProjectId ? projects.get(selectedProjectId) : null;
+  const selectedProjectPath = selectedProject?.workingDirectory ?? null;
+  const selectedProjectName = useMemo(() => {
+    if (selectedProject) {
+      return selectedProject.name || selectedProject.workingDirectory.split('/').pop() || 'Project';
+    }
+    return '';
+  }, [selectedProject]);
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Quick Actions Toolbar - shows when project selected */}
+        <AnimatePresence>
+          {selectedProjectPath && (
+            <QuickActionsToolbar
+              projectPath={selectedProjectPath}
+              projectName={selectedProjectName}
+            />
+          )}
+        </AnimatePresence>
+
         <Routes>
           <Route
             path="/"
