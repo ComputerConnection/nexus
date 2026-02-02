@@ -1,7 +1,9 @@
 pub mod api;
 pub mod commands;
 pub mod process;
+pub mod project;
 pub mod state;
+pub mod workflow;
 
 #[cfg(feature = "database")]
 pub mod db;
@@ -17,20 +19,13 @@ use tokio::runtime::Runtime;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load .env file
+    // Load .env file (supports comments, quoted values, and multiline)
     #[cfg(feature = "database")]
-    {
-        if let Ok(env_path) = std::env::current_dir() {
-            let env_file = env_path.join(".env");
-            if env_file.exists() {
-                if let Ok(contents) = std::fs::read_to_string(&env_file) {
-                    for line in contents.lines() {
-                        if let Some((key, value)) = line.split_once('=') {
-                            std::env::set_var(key.trim(), value.trim());
-                        }
-                    }
-                }
-            }
+    if let Err(e) = dotenvy::dotenv() {
+        if e.not_found() {
+            log::debug!("No .env file found, using environment variables");
+        } else {
+            log::warn!("Failed to load .env file: {}", e);
         }
     }
 
@@ -46,21 +41,31 @@ pub fn run() {
 
             #[cfg(feature = "database")]
             {
-                let database_url = std::env::var("DATABASE_URL")
-                    .unwrap_or_else(|_| "postgres://nexus:nexus123@localhost:5432/nexus".to_string());
+                match std::env::var("DATABASE_URL") {
+                    Ok(database_url) => {
+                        // Create a temporary runtime for async database initialization.
+                        // The pool remains valid after the runtime is dropped since sqlx
+                        // pools are runtime-agnostic once created.
+                        let pool_result = {
+                            let rt = Runtime::new().expect("Failed to create Tokio runtime");
+                            rt.block_on(async {
+                                db::pool::create_pool(&database_url).await
+                            })
+                        };
 
-                let rt = Runtime::new().expect("Failed to create Tokio runtime");
-
-                match rt.block_on(async {
-                    let pool = db::pool::create_pool(&database_url).await?;
-                    Ok::<_, db::pool::PoolError>(pool)
-                }) {
-                    Ok(pool) => {
-                        app_state = Arc::new(AppState::with_database(pool));
-                        log::info!("NEXUS initialized with database connection");
+                        match pool_result {
+                            Ok(pool) => {
+                                app_state = Arc::new(AppState::with_database(pool));
+                                log::info!("NEXUS initialized with database connection");
+                            }
+                            Err(e) => {
+                                log::warn!("Failed to connect to database: {}. Running in offline mode.", e);
+                                app_state = Arc::new(AppState::new());
+                            }
+                        }
                     }
-                    Err(e) => {
-                        log::warn!("Failed to connect to database: {}. Running in offline mode.", e);
+                    Err(_) => {
+                        log::info!("DATABASE_URL not set. Running in offline mode.");
                         app_state = Arc::new(AppState::new());
                     }
                 }
@@ -94,20 +99,62 @@ pub fn run() {
             commands::agent::list_agents,
             commands::agent::get_agent,
             commands::agent::send_to_agent,
+            commands::agent::restart_agent,
+            commands::agent::get_agent_output,
+            commands::agent::get_agent_runtime,
+            commands::agent::pause_agent,
+            commands::agent::resume_agent,
             // Project commands
             commands::project::create_project,
             commands::project::get_project,
             commands::project::list_projects,
             commands::project::update_project,
             commands::project::delete_project,
+            commands::project::get_projects_base_directory,
             // Workflow commands
             commands::workflow::create_workflow,
             commands::workflow::get_workflow,
             commands::workflow::list_workflows,
             commands::workflow::execute_workflow,
+            commands::workflow::execute_orchestrated_workflow,
+            commands::workflow::cancel_workflow_execution,
+            commands::workflow::get_workflow_execution_status,
+            commands::workflow::validate_workflow,
+            // Enhanced orchestration commands
+            commands::workflow::execute_enhanced_workflow,
+            commands::workflow::get_execution_context,
+            commands::workflow::list_checkpoints,
+            commands::workflow::list_execution_checkpoints,
+            commands::workflow::cleanup_checkpoints,
+            commands::workflow::get_available_agent_roles,
+            commands::workflow::get_aggregation_strategies,
+            commands::workflow::get_condition_types,
+            // Template commands
+            commands::workflow::list_workflow_templates,
+            commands::workflow::get_workflow_template,
+            commands::workflow::search_workflow_templates,
+            commands::workflow::get_templates_by_category,
+            commands::workflow::instantiate_template,
+            commands::workflow::get_template_categories,
+            // History commands
+            commands::workflow::get_execution_history_stats,
+            commands::workflow::list_execution_history,
+            commands::workflow::search_execution_history,
+            // Resource management commands
+            commands::workflow::get_resource_stats,
+            commands::workflow::get_resource_config,
+            commands::workflow::check_resource_availability,
+            // Messaging commands
+            commands::workflow::get_execution_messages,
+            commands::workflow::get_unread_agent_messages,
             // System commands
             commands::system::get_system_status,
             commands::system::get_database_status,
+            // MCP commands
+            commands::mcp::mcp_call_tool,
+            commands::mcp::mcp_list_tools,
+            commands::mcp::mcp_health_check,
+            commands::mcp::mcp_server_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,7 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-
-// MCP Server configuration
-const MCP_SERVER_URL = 'http://localhost:9999';
+import * as tauri from '../services/tauri';
 
 // Recipe types
 export type RecipeCategory =
@@ -93,24 +91,12 @@ export function useRecipes() {
   const [categoryFilter, setCategoryFilter] = useState<RecipeCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Call MCP tool via HTTP
+  // Call MCP tool via Tauri bridge
   const callMcpTool = useCallback(async <T>(
     toolName: string,
     args: Record<string, unknown> = {}
   ): Promise<T> => {
-    const response = await fetch(`${MCP_SERVER_URL}/tools/${toolName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(args),
-    });
-
-    if (!response.ok) {
-      throw new Error(`MCP tool call failed: ${response.statusText}`);
-    }
-
-    return response.json();
+    return tauri.mcpCallTool<T>(toolName, args);
   }, []);
 
   // Fetch all recipes
